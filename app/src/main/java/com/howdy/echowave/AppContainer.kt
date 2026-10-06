@@ -19,6 +19,7 @@ import com.howdy.echowave.data.remote.innertube.VisitorStore
 import com.howdy.echowave.data.remote.innertube.buildInnerTubeApi
 import com.howdy.echowave.data.remote.potoken.WebViewPoTokenProvider
 import com.howdy.echowave.data.repository.LibraryRepositoryImpl
+import com.howdy.echowave.playback.PlaybackSessionConnector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -98,4 +99,12 @@ class AppContainer(ctx: Context) {
     val recommendations by lazy { NoOpRecommendationProvider() }
 
     val playback by lazy { Media3PlaybackController(musicRepo, libraryRepo) }
+
+    /**
+     * Single app-lifetime session connection. Activity recreation reuses it
+     * (connect is idempotent); it is intentionally never released on
+     * backgrounding — release would deafen notification/lock-screen and
+     * end-of-track advance while audio continues in the service.
+     */
+    val sessionConnector by lazy { PlaybackSessionConnector(appCtx, playback) }
 }

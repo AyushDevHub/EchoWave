@@ -36,9 +36,13 @@ class Media3PlaybackController(
     private var pending: Pair<List<Track>, Int>? = null
     private var positionJob: Job? = null
 
+    companion object {
+        private const val RESTART_THRESHOLD_MS = 3000L
+    }
+
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            android.util.Log.d("EchoWavePlay", "onIsPlayingChanged=$isPlaying")
+            logd("onIsPlayingChanged=$isPlaying")
             _state.value = _state.value.copy(isPlaying = isPlaying, isBuffering = false)
             if (isPlaying) startPositionPolling() else stopPositionPolling()
         }
@@ -65,8 +69,8 @@ class Media3PlaybackController(
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
             val cause = generateSequence<Throwable>(error) { it.cause }.toList()
                 .joinToString(" <- ") { "${it.javaClass.simpleName}: ${it.message}" }
-            android.util.Log.e("EchoWavePlay", "onPlayerError code=${error.errorCode} name=${error.errorCodeName} msg=${error.message}")
-            android.util.Log.e("EchoWavePlay", "causes: $cause")
+            loge("onPlayerError code=${error.errorCode} name=${error.errorCodeName} msg=${error.message}")
+            loge("causes: $cause")
             _state.value = _state.value.copy(
                 isPlaying = false,
                 isBuffering = false,
@@ -77,7 +81,7 @@ class Media3PlaybackController(
 
     fun attach(c: MediaController) {
         detach()
-        android.util.Log.d("EchoWaveSession", "controller attached")
+        logsess("controller attached")
         controller = c.apply {
             addListener(listener)
             shuffleModeEnabled = _state.value.shuffleEnabled
@@ -118,7 +122,7 @@ class Media3PlaybackController(
     }
 
     fun detach() {
-        android.util.Log.d("EchoWaveSession", "controller detached")
+        logsess("controller detached")
         // Do NOT clear PlaybackRouter here: detach fires on backgrounding
         // (onStop), exactly when notification/lock-screen need the routes.
         // Handlers stay valid while the process lives (app-scoped queue).
@@ -128,35 +132,58 @@ class Media3PlaybackController(
     }
 
     override suspend fun play(tracks: List<Track>, index: Int) {
-        val track = tracks.getOrNull(index) ?: return
-        android.util.Log.d("EchoWavePlay", "play() trackId=${track.id} index=$index sessionBound=${controller != null}")
-        val session = controller
-        if (session == null) {
-            // Session not bound yet — hold state, replay on attach.
-            pending = tracks to index
-            _state.value = _state.value.copy(
-                currentTrack = track, queue = tracks, queueIndex = index,
-                isBuffering = true, error = null,
-            )
-            return
-        }
+        // Direct tap: surface the error, do not skip.
+        playAt(tracks, index)
+    }
+
+    /**
+     * Resolve + load one queue slot. Returns true when the track is
+     * playable (or will be on attach); false leaves the reason in state.
+     */
+    private suspend fun playAt(tracks: List<Track>, index: Int): Boolean {
+        val track = tracks.getOrNull(index) ?: return false
+        logd("play() trackId=${track.id} index=$index sessionBound=${controller != null}")
         _state.value = _state.value.copy(
             currentTrack = track, queue = tracks, queueIndex = index,
             isBuffering = true, error = null,
         )
         when (val r = music.resolveStream(track.id)) {
             is AppResult.Ok -> {
-                android.util.Log.d("EchoWavePlay", "resolve OK trackId=${track.id} mime=${r.value.mimeType}")
+                logd("resolve OK trackId=${track.id} mime=${r.value.mimeType}")
+                val session = controller
+                if (session == null) {
+                    // Session not bound yet — hold, replay on attach.
+                    pending = tracks to index
+                    return true
+                }
                 session.setMediaItem(track.toMediaItem(r.value.url))
                 session.prepare()
                 session.play()
                 _state.value = _state.value.copy(currentTrack = track, isPlaying = true, isBuffering = false)
                 scope.launch(Dispatchers.IO) { library.recordPlayed(track) }
+                return true
             }
             is AppResult.Err -> {
-                android.util.Log.e("EchoWavePlay", "resolve FAIL trackId=${track.id} reason=${r.message}")
+                loge("resolve FAIL trackId=${track.id} reason=${r.message}")
                 _state.value = _state.value.copy(isBuffering = false, error = r.message)
+                return false
             }
+        }
+    }
+
+    /**
+     * Queue advance with bounded skip: unplayable tracks are stepped over
+     * (at most a full queue) instead of stranding on an invisible error.
+     */
+    internal suspend fun advancePlay(delta: Int) {
+        val tracks = _state.value.queue
+        var i = _state.value.queueIndex + delta
+        var attempts = 0
+        while (i in tracks.indices && attempts < tracks.size) {
+            logd("advance try index=$i")
+            if (playAt(tracks, i)) return
+            i += delta
+            attempts++
         }
     }
 
@@ -168,28 +195,44 @@ class Media3PlaybackController(
         if (c.isPlaying) c.pause() else c.play()
     }
 
-    override fun next() = jump(1)
-    override fun previous() = jump(-1)
+    override fun next() {
+        logd("next() queueIndex=${_state.value.queueIndex} size=${_state.value.queue.size}")
+        scope.launch { advancePlay(1) }
+    }
 
-    private fun jump(delta: Int) {
+    override fun previous() {
         val s = _state.value
-        val next = s.queueIndex + delta
-        if (next in s.queue.indices) scope.launch { play(s.queue, next) }
+        val pos = controller?.currentPosition ?: s.positionMs
+        logd("previous() queueIndex=${s.queueIndex} size=${s.queue.size} pos=$pos")
+        // Standard player semantics: fresh/rewind when early in (or at the
+        // start of) the queue head, step back only when further in.
+        if (pos > RESTART_THRESHOLD_MS || s.queueIndex == 0) {
+            seekTo(0)
+            return
+        }
+        scope.launch { advancePlay(-1) }
     }
 
     private fun onTrackEnded() {
         val s = _state.value
         when (s.repeatMode) {
-            RepeatMode.ONE -> scope.launch { play(s.queue, s.queueIndex) }
+            RepeatMode.ONE -> scope.launch { playAt(s.queue, s.queueIndex) }
             else -> {
                 val next = s.queueIndex + 1
-                if (next in s.queue.indices) scope.launch { play(s.queue, next) }
+                if (next in s.queue.indices) scope.launch { advancePlay(1) }
                 else if (s.repeatMode == RepeatMode.ALL && s.queue.isNotEmpty()) {
-                    scope.launch { play(s.queue, 0) }
+                    scope.launch { advancePlayFromStart() }
                 } else {
                     _state.value = s.copy(isPlaying = false)
                 }
             }
+        }
+    }
+
+    private suspend fun advancePlayFromStart() {
+        val tracks = _state.value.queue
+        for (i in tracks.indices) {
+            if (playAt(tracks, i)) return
         }
     }
 
@@ -254,6 +297,14 @@ private fun RepeatMode.toExoRepeat(): Int = when (this) {
     RepeatMode.ALL -> Player.REPEAT_MODE_ALL
     RepeatMode.ONE -> Player.REPEAT_MODE_ONE
 }
+
+internal var ctlLog: (String, String, Throwable?) -> Unit = { tag, msg, err ->
+    if (err == null) android.util.Log.d(tag, msg) else android.util.Log.e(tag, msg, err)
+}
+
+private fun logd(msg: String) = ctlLog("EchoWavePlay", msg, null)
+private fun loge(msg: String, e: Throwable? = null) = ctlLog("EchoWavePlay", msg, e)
+private fun logsess(msg: String) = ctlLog("EchoWaveSession", msg, null)
 
 /**
  * Rebuilds the current track from what the session player still holds

@@ -12,16 +12,39 @@ import androidx.media3.common.Player
 class QueueRoutingPlayer(wrapped: Player) : ForwardingPlayer(wrapped) {
     override fun seekToNext() {
         val custom = PlaybackRouter.onNext
+        android.util.Log.d(TAG, "seekToNext ownerPresent=${custom != null}")
         if (custom != null) custom() else super.seekToNext()
+    }
+
+    // MediaSession transport controls and system media notifications use the
+    // media-item variants. The app's mini-player calls seekToNext(), so route
+    // both APIs to the same queue owner.
+    override fun seekToNextMediaItem() {
+        val custom = PlaybackRouter.onNext
+        android.util.Log.d(TAG, "seekToNextMediaItem ownerPresent=${custom != null}")
+        if (custom != null) custom() else super.seekToNextMediaItem()
     }
 
     override fun seekToPrevious() {
         val custom = PlaybackRouter.onPrevious
+        android.util.Log.d(TAG, "seekToPrevious ownerPresent=${custom != null}")
         if (custom != null) custom() else super.seekToPrevious()
+    }
+
+    override fun seekToPreviousMediaItem() {
+        val custom = PlaybackRouter.onPrevious
+        android.util.Log.d(TAG, "seekToPreviousMediaItem ownerPresent=${custom != null}")
+        if (custom != null) custom() else super.seekToPreviousMediaItem()
     }
 
     override fun hasNext(): Boolean =
         if (PlaybackRouter.onNext != null) PlaybackRouter.canNext() else super.hasNext()
+
+    override fun hasNextMediaItem(): Boolean =
+        if (PlaybackRouter.onNext != null) PlaybackRouter.canNext() else super.hasNextMediaItem()
+
+    override fun hasPreviousMediaItem(): Boolean =
+        if (PlaybackRouter.onPrevious != null) PlaybackRouter.canPrevious() else super.hasPreviousMediaItem()
 
     override fun getAvailableCommands(): Player.Commands {
         val base = super.getAvailableCommands()
@@ -32,7 +55,13 @@ class QueueRoutingPlayer(wrapped: Player) : ForwardingPlayer(wrapped) {
         if (PlaybackRouter.onNext == null && PlaybackRouter.onPrevious == null) return base
         return base.buildUpon()
             .add(Player.COMMAND_SEEK_TO_NEXT)
+            .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
             .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+            .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
             .build()
+    }
+
+    companion object {
+        private const val TAG = "EchoWaveRoute"
     }
 }

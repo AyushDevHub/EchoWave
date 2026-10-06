@@ -9,27 +9,18 @@ import com.howdy.echowave.ui.navigation.EchoWaveNavHost
 import com.howdy.echowave.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
-    private var connector: PlaybackSessionConnector? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val container = (application as EchoWaveApp).container
-        connector = PlaybackSessionConnector(this, container.playback)
+        // App-scoped connection: survives backgrounding so notification,
+        // lock-screen and end-of-track advance always reach the player.
+        // Releasing in onStop is what silently broke background control.
+        container.sessionConnector.connect()
         setContent {
             MyApplicationTheme {
                 EchoWaveNavHost(controller = container.playback)
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        connector?.connect()
-    }
-
-    override fun onStop() {
-        connector?.release()
-        super.onStop()
     }
 }
