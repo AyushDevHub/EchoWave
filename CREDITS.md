@@ -23,7 +23,8 @@ EchoWave's own Kotlin files are not verbatim copies unless stated above. Files t
 - [LastWave-native](https://github.com/Clash-Projects/LastWave-native) — GPL-3.0. Kotlin, Compose, Media3, and layered architecture were considered as references. No LastWave-native code is included.
 - [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) — GPL-3.0. Its extractor ecosystem is acknowledged as background for a possible fallback; no NewPipe code or dependency is currently included.
 - BravePipe — a possible fallback concept mentioned in donor research. EchoWave's `BravePipeFallbackResolver` is only an unimplemented stub; no BravePipe code is included.
-- Echo-Music also informed investigation of LRCLIB lyrics integration. EchoWave does not currently include a lyrics implementation or LRCLIB client.
+- [YouLyPlus](https://github.com/ibratabian17/YouLyPlus) and its [LyricsPlus backend](https://github.com/ibratabian17/lyricsplus) are credited as the source ecosystem for EchoWave's word-synced lyrics integration. EchoWave calls the documented LyricsPlus v2 API and adapts its response format (including word/syllable timestamps) in its own Kotlin implementation; it does not bundle YouLyPlus extension code. EchoWave also queries Binimum's LyricsPlus catalog and validates its hosted TTML URL before parsing. LyricsPlus aggregates third-party lyrics services; the service and its community mirrors remain independently operated.
+- [LRCLIB](https://lrclib.net) is used as an additional lyrics source and fallback when LyricsPlus has no usable result. EchoWave's client implementation is its own Kotlin code.
 
 ## Dependencies
 

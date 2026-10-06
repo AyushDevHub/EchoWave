@@ -23,6 +23,15 @@ private class FakeLibrary : LibraryRepository {
     override fun observeFavoriteIds(): kotlinx.coroutines.flow.Flow<Set<String>> =
         kotlinx.coroutines.flow.flowOf(emptySet())
     override suspend fun favorites() = emptyList<Track>()
+    override fun observePlaylists(): kotlinx.coroutines.flow.Flow<List<com.howdy.echowave.domain.model.Playlist>> =
+        kotlinx.coroutines.flow.flowOf(emptyList())
+    override fun observePlaylistTracks(playlistId: Long): kotlinx.coroutines.flow.Flow<List<Track>> =
+        kotlinx.coroutines.flow.flowOf(emptyList())
+    override suspend fun createPlaylist(name: String) = 0L
+    override suspend fun deletePlaylist(id: Long) {}
+    override suspend fun addToPlaylist(playlistId: Long, track: Track) {}
+    override suspend fun removeFromPlaylist(playlistId: Long, trackId: String) {}
+    override suspend fun isInPlaylist(playlistId: Long, trackId: String) = false
     override suspend fun toggleFavorite(track: Track) = true
     override suspend fun isFavorite(id: String) = false
     override suspend fun history(limit: Int) = emptyList<Track>()

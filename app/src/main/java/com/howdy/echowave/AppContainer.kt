@@ -18,6 +18,7 @@ import com.howdy.echowave.data.remote.innertube.StreamRegistry
 import com.howdy.echowave.data.remote.innertube.VisitorBootstrap
 import com.howdy.echowave.data.remote.innertube.VisitorStore
 import com.howdy.echowave.data.remote.innertube.buildInnerTubeApi
+import com.howdy.echowave.data.remote.lyrics.LyricsRepository
 import com.howdy.echowave.data.remote.potoken.WebViewPoTokenProvider
 import com.howdy.echowave.data.repository.LibraryRepositoryImpl
 import com.howdy.echowave.playback.PlaybackSessionConnector
@@ -38,7 +39,11 @@ class AppContainer(ctx: Context) {
     private val appCtx = ctx.applicationContext
 
     val db: EchoWaveDb by lazy {
-        Room.databaseBuilder(appCtx, EchoWaveDb::class.java, "echowave.db").build()
+        // Dev-phase schema churn (v1->v2 playlists): destructive rebuild is
+        // acceptable pre-release; real migrations start at v1.0 ship.
+        Room.databaseBuilder(appCtx, EchoWaveDb::class.java, "echowave.db")
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     val prefs by lazy {
@@ -96,7 +101,8 @@ class AppContainer(ctx: Context) {
     }
 
     val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver) }
-    val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao()) }
+    val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao(), db.playlistDao()) }
+    val lyricsRepo by lazy { LyricsRepository() }
     val settingsRepo by lazy { SettingsRepository(prefs) }
     val recommendations by lazy { NoOpRecommendationProvider() }
 

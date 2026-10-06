@@ -32,6 +32,7 @@ import com.howdy.echowave.ui.home.HomeScreen
 import com.howdy.echowave.ui.library.LibraryScreen
 import com.howdy.echowave.ui.library.LibraryViewModel
 import com.howdy.echowave.ui.player.MiniPlayer
+import com.howdy.echowave.ui.player.LyricsViewModel
 import com.howdy.echowave.ui.player.NowPlayingScreen
 import com.howdy.echowave.ui.search.SearchScreen
 import com.howdy.echowave.ui.settings.SettingsScreen
@@ -43,10 +44,13 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
-    val repo = (LocalContext.current.applicationContext as EchoWaveApp).container.libraryRepo
-    val libVm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(repo))
+    val repo = (LocalContext.current.applicationContext as EchoWaveApp).container
+    val libVm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(repo.libraryRepo))
     val favoriteIds by libVm.favoriteIds.collectAsState()
     val history by libVm.history.collectAsState()
+    val playlists by libVm.playlists.collectAsState()
+    val lyricsVm: LyricsViewModel = viewModel(factory = LyricsViewModel.Factory(repo.lyricsRepo))
+    val lyricsUi by lyricsVm.ui.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -120,6 +124,7 @@ fun EchoWaveNavHost(controller: PlaybackController) {
             composable(Routes.SETTINGS) { SettingsScreen() }
             composable(Routes.NOW_PLAYING) {
                 val current = state.currentTrack
+                LaunchedEffect(current?.id) { lyricsVm.load(current) }
                 NowPlayingScreen(
                     state = state,
                     onToggle = controller::toggle,
@@ -138,6 +143,20 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                         val s = controller.state.value
                         scope.launch { controller.play(s.queue, i) }
                     },
+                    playlists = playlists,
+                    onCreateAndAdd = { name ->
+                        val t = current ?: return@NowPlayingScreen
+                        scope.launch {
+                            runCatching { repo.libraryRepo.createPlaylist(name) }
+                                .onSuccess { id -> repo.libraryRepo.addToPlaylist(id, t) }
+                        }
+                    },
+                    onAddToPlaylist = { id ->
+                        val t = current ?: return@NowPlayingScreen
+                        scope.launch { repo.libraryRepo.addToPlaylist(id, t) }
+                    },
+                    lyrics = lyricsUi,
+                    onRetryLyrics = { lyricsVm.load(current, forceRefresh = true) },
                 )
             }
         }

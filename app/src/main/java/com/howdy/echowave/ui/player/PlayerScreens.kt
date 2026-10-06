@@ -2,6 +2,7 @@ package com.howdy.echowave.ui.player
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.SkipNext
@@ -60,8 +62,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import coil.compose.AsyncImage
 import com.howdy.echowave.R
 import com.howdy.echowave.core.common.formatDuration
@@ -158,8 +164,15 @@ fun NowPlayingScreen(
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
     onPlayQueueAt: (Int) -> Unit = {},
+    playlists: List<com.howdy.echowave.domain.model.Playlist> = emptyList(),
+    onCreateAndAdd: (String) -> Unit = {},
+    onAddToPlaylist: (Long) -> Unit = {},
+    lyrics: LyricsUiState = LyricsUiState(),
+    onRetryLyrics: () -> Unit = {},
 ) {
     var queueOpen by remember { mutableStateOf(false) }
+    var lyricsOpen by remember { mutableStateOf(false) }
+    var addOpen by remember { mutableStateOf(false) }
     val track = state.currentTrack
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(
@@ -176,6 +189,9 @@ fun NowPlayingScreen(
             TextButton(onClick = { queueOpen = true }) {
                 Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Queue", modifier = Modifier.padding(start = 6.dp))
+            }
+            TextButton(onClick = { lyricsOpen = true }) {
+                Text("Lyrics")
             }
         }
         if (track == null) {
@@ -196,6 +212,32 @@ fun NowPlayingScreen(
                 onRetry = onRetry,
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
+                onAddToPlaylist = { addOpen = true },
+            )
+        }
+    }
+
+    if (addOpen && track != null) {
+        com.howdy.echowave.ui.library.AddToPlaylistDialog(
+            track = track,
+            playlists = playlists,
+            onCreateAndAdd = { onCreateAndAdd(it); addOpen = false },
+            onAdd = { onAddToPlaylist(it); addOpen = false },
+            onDismiss = { addOpen = false },
+        )
+    }
+
+    if (lyricsOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { lyricsOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            LyricsSheet(
+                title = track?.title,
+                state = lyrics,
+                positionMs = state.positionMs,
+                onRetry = onRetryLyrics,
             )
         }
     }
@@ -244,6 +286,7 @@ private fun PlayerPage(
     onRetry: () -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    onAddToPlaylist: () -> Unit = {},
 ) {
     val track = state.currentTrack ?: return
     Column(
@@ -306,6 +349,9 @@ private fun PlayerPage(
                     contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (isFavorite) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            IconButton(onClick = onAddToPlaylist) {
+                Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist")
+            }
         }
 
         val progress = if (state.durationMs > 0) {
@@ -363,8 +409,7 @@ private fun PlayerPage(
     }
 }
 
-/** Clean, progress-aware bars with a subtle pulse instead of intersecting sine lines. */
-@Composable
+/** Clean, progress-aware bars with a subtle pulse instead of intersecting sine lines. */@Composable
 fun WavyStrip(seed: String, progress: Float, playing: Boolean) {
     val pulse by rememberInfiniteTransition(label = "waveform").animateFloat(
         initialValue = 0.88f,
@@ -393,6 +438,89 @@ fun WavyStrip(seed: String, progress: Float, playing: Boolean) {
                 strokeWidth = stroke,
                 cap = StrokeCap.Round,
             )
+        }
+    }
+}
+
+/** Synced-lyrics sheet: highlights the active line and follows it. Display only. */
+@Composable
+fun LyricsSheet(
+    title: String?,
+    state: LyricsUiState,
+    positionMs: Long,
+    onRetry: () -> Unit = {},
+) {
+    val lines = state.lines
+    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Text(
+            title ?: "Lyrics",
+            style = MaterialTheme.typography.headlineSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        )
+        when {
+            state.loading -> Text(
+                "Finding lyrics…",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+            lines == null -> Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                Text(state.error ?: "No lyrics found for this track.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onRetry) { Text("Try again") }
+            }
+            else -> {
+                val current = com.howdy.echowave.data.remote.lyrics.currentLrcIndex(lines, positionMs)
+                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(current) {
+                    if (current >= 0) {
+                        runCatching {
+                            listState.animateScrollToItem((current - 2).coerceAtLeast(0))
+                        }
+                    }
+                }
+                androidx.compose.foundation.lazy.LazyColumn(state = listState) {
+                    items(lines.size) { i ->
+                        val active = i == current
+                        val line = lines[i]
+                        val activeWord = if (active) com.howdy.echowave.data.remote.lyrics
+                            .currentLrcWordIndex(line.words, positionMs) else -1
+                        val wordScales = line.words.mapIndexed { wordIndex, _ ->
+                            animateFloatAsState(
+                                targetValue = if (wordIndex == activeWord) 1.18f else 1f,
+                                animationSpec = tween(durationMillis = 140),
+                                label = "lyricWordZoom",
+                            ).value
+                        }
+                        val content = buildAnnotatedString {
+                            if (line.words.isEmpty()) {
+                                withStyle(SpanStyle(color = if (active) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant)) {
+                                    append(line.text.ifBlank { "♪" })
+                                }
+                            } else {
+                                line.words.forEachIndexed { wordIndex, word ->
+                                    withStyle(SpanStyle(
+                                        color = if (wordIndex == activeWord) MaterialTheme.colorScheme.primary
+                                        else if (active) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (wordIndex == activeWord) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = wordScales[wordIndex].em,
+                                    )) { append(word.text) }
+                                }
+                            }
+                        }
+                        Text(
+                            content,
+                            style = if (active) MaterialTheme.typography.bodyLarge
+                            else MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }

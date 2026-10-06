@@ -135,4 +135,46 @@ class InnerTubeMappersTest {
         val noPot = com.howdy.echowave.domain.source.StreamInfo("v1", "http://a")
         assertEquals("http://a", attachPoToken(noPot).url)
     }
+
+    @Test fun `video items flagged by kind and view counts`() {
+        val root = json(
+            """{"contents":{"sectionListRenderer":{"contents":[
+              {"musicShelfRenderer":{"contents":[
+                {"musicResponsiveListItemRenderer":{
+                  "flexColumns":[
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Song A"}]}}},
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Song"},{"text":" • "},{"text":"Artist"},{"text":" • "},{"text":"Album"}]}}}
+                  ],
+                  "playlistItemData":{"videoId":"song1"},
+                  "thumbnail":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"http://a"}]}}}
+                }},
+                {"musicResponsiveListItemRenderer":{
+                  "flexColumns":[
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Video B"}]}}},
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Video"},{"text":" • "},{"text":"Artist"},{"text":" • "},{"text":"1.2M views"}]}}}
+                  ],
+                  "playlistItemData":{"videoId":"vid1"},
+                  "thumbnail":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"http://b"}]}}}
+                }}
+              ]}}
+            ]}}}""",
+        )
+        val tracks = parseSearchResponse(root)
+        assertEquals(2, tracks.size)
+        assertEquals(false, tracks[0].isVideo)
+        assertEquals("Album", tracks[0].album)
+        assertEquals(true, tracks[1].isVideo)
+    }
+
+    @Test fun `sections split top songs videos`() {
+        val t = { id: String, video: Boolean ->
+            com.howdy.echowave.domain.model.Track(id, "t", "a", isVideo = video)
+        }
+        val ui = com.howdy.echowave.ui.search.SearchUiState(
+            results = listOf(t("top", false), t("s1", false), t("v1", true)),
+        )
+        assertEquals("top", ui.topResult?.id)
+        assertEquals(listOf("s1"), ui.songs.map { it.id })
+        assertEquals(listOf("v1"), ui.videos.map { it.id })
+    }
 }

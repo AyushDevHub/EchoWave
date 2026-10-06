@@ -15,14 +15,21 @@ class SettingsRepositoryTest {
     @get:Rule val tmp = TemporaryFolder()
 
     private fun repo(): SettingsRepository {
+        // Non-existent path on purpose: a pre-created EMPTY file trips
+        // DataStore init on some versions; missing file is always clean.
+        val file = java.io.File(tmp.root, "prefs-${System.nanoTime()}.preferences_pb")
         val store = PreferenceDataStoreFactory.create(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        ) { tmp.newFile("prefs.preferences_pb") }
+        ) { file }
         return SettingsRepository(store)
     }
 
     @Test fun `defaults to system then persists dark`() = runBlocking {
-        val repo = repo()
+        val file = java.io.File(tmp.root, "prefs-${System.nanoTime()}.preferences_pb")
+        val store = PreferenceDataStoreFactory.create(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        ) { file }
+        val repo = SettingsRepository(store)
         assertEquals(Appearance.SYSTEM, repo.appearance.first())
         repo.setAppearance(Appearance.DARK)
         assertEquals(Appearance.DARK, repo.appearance.first())

@@ -17,7 +17,12 @@ data class SearchUiState(
     val loading: Boolean = false,
     val results: List<Track> = emptyList(),
     val error: String? = null,
-)
+) {
+    /** First hit overall; the rest split into songs vs videos. Pure derivation. */
+    val topResult: Track? get() = results.firstOrNull()
+    val songs: List<Track> get() = results.drop(1).filter { !it.isVideo }
+    val videos: List<Track> get() = results.drop(1).filter { it.isVideo }
+}
 
 class SearchViewModel(
     private val search: SearchTracksUseCase,

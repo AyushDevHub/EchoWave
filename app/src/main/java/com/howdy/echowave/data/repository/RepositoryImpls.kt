@@ -1,7 +1,11 @@
 package com.howdy.echowave.data.repository
 
+import com.howdy.echowave.data.local.PlaylistDao
+import com.howdy.echowave.data.local.PlaylistEntity
+import com.howdy.echowave.data.local.PlaylistTrackEntity
 import com.howdy.echowave.data.local.TrackDao
 import com.howdy.echowave.data.local.TrackEntity
+import com.howdy.echowave.domain.model.Playlist
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.repository.LibraryRepository
 import com.howdy.echowave.domain.repository.MusicRepository
@@ -26,6 +30,7 @@ class MusicRepositoryImpl(
 
 class LibraryRepositoryImpl(
     private val dao: TrackDao,
+    private val playlists: PlaylistDao,
 ) : LibraryRepository {
     override fun observeFavorites(): Flow<List<Track>> =
         dao.favorites().map { it.map(TrackEntity::toDomain) }
@@ -57,4 +62,50 @@ class LibraryRepositoryImpl(
             dao.touchPlayed(track.id, System.currentTimeMillis())
         }
     }
+
+    override fun observePlaylists(): Flow<List<Playlist>> =
+        playlists.observePlaylists().map { list ->
+            list.map { Playlist(it.playlist.id, it.playlist.name, it.trackCount) }
+        }
+
+    override fun observePlaylistTracks(playlistId: Long): Flow<List<Track>> =
+        playlists.observeTracks(playlistId).map { list ->
+            list.map {
+                Track(it.trackId, it.title, it.artist, it.album, it.artworkUrl, it.durationMs)
+            }
+        }
+
+    override suspend fun createPlaylist(name: String): Long {
+        val clean = name.trim().take(80)
+        require(clean.isNotEmpty())
+        return playlists.createPlaylist(PlaylistEntity(name = clean, createdAt = System.currentTimeMillis()))
+    }
+
+    override suspend fun deletePlaylist(id: Long) {
+        playlists.deletePlaylist(id)
+    }
+
+    override suspend fun addToPlaylist(playlistId: Long, track: Track) {
+        if (playlists.contains(playlistId, track.id) > 0) return
+        val pos = playlists.count(playlistId)
+        playlists.addTrack(
+            PlaylistTrackEntity(
+                playlistId = playlistId,
+                trackId = track.id,
+                position = pos,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                artworkUrl = track.artworkUrl,
+                durationMs = track.durationMs,
+            ),
+        )
+    }
+
+    override suspend fun removeFromPlaylist(playlistId: Long, trackId: String) {
+        playlists.removeTrack(playlistId, trackId)
+    }
+
+    override suspend fun isInPlaylist(playlistId: Long, trackId: String): Boolean =
+        playlists.contains(playlistId, trackId) > 0
 }

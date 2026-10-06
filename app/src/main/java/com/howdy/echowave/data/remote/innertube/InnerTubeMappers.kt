@@ -73,14 +73,24 @@ private fun parseListItem(item: JsonObject): Track? {
 
     var artist = "Unknown artist"
     var album: String? = null
+    var isVideo = false
     val subRuns = flex.getOrNull(1)?.jsonObject
         ?.obj("musicResponsiveListItemFlexColumnRenderer")
         ?.obj("text")?.arr("runs")
     if (subRuns != null) {
         val texts = subRuns.mapNotNull { (it as? JsonObject)?.str("text") }
             .filter { it != " • " }
-        if (texts.isNotEmpty()) artist = texts[0]
-        if (texts.size > 1) album = texts[1]
+        val parts = texts.map(String::trim)
+            .filterNot { it.isEmpty() || it in setOf("•", "â€¢", "·", "|") }
+        val kind = parts.firstOrNull()?.lowercase()
+        val hasItemKind = kind in setOf("song", "video", "album", "playlist", "artist")
+        // Video results declare kind "Video" or show view counts ("1.2M views").
+        isVideo = kind == "video" ||
+            subRuns.mapNotNull { (it as? JsonObject)?.str("text") }
+                .joinToString("").contains("view", ignoreCase = true)
+        val artistIndex = if (hasItemKind) 1 else 0
+        parts.getOrNull(artistIndex)?.let { artist = it }
+        parts.getOrNull(artistIndex + 1)?.let { if (!isVideo) album = it }
     }
 
     val videoId = item.obj("playlistItemData")?.str("videoId")
@@ -110,6 +120,7 @@ private fun parseListItem(item: JsonObject): Track? {
         artworkUrl = artwork,
         durationMs = durationMs,
         source = "ytm",
+        isVideo = isVideo,
     )
 }
 
