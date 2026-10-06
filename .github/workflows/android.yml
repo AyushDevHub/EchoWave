@@ -14,4 +14,6 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+      # gradlew loses its exec bit on Windows checkouts; guarantee it here.
+      - run: chmod +x gradlew
       - run: ./gradlew assembleDebug test --console=plain
