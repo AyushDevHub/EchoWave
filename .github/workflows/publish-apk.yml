@@ -1,0 +1,27 @@
+﻿name: Publish EchoWave APK
+
+on:
+  push:
+    tags:
+      - v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tagged release
+        uses: actions/checkout@v4
+      - name: Create GitHub release and attach signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            release-assets/EchoWave-1.0.0.apk \
+            release-assets/EchoWave-1.0.0.apk.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "EchoWave 1.0.0" \
+            --notes-file docs/releases/1.0.0.md

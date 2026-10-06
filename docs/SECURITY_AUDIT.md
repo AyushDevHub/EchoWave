@@ -2,13 +2,13 @@
 
 **Review date:** 2026-10-07
 **Reviewed artifact:** signed local release APK and AAB; working tree at review time
-**Release decision:** **BLOCKED**. This is a source review, not a store or legal approval.
+**Release status:** **Published at the project owner's direction; provider-policy risk remains unresolved.** This is an engineering review, not a store or legal approval.
 
 ## Findings that block public release
 
 | Severity | Finding | Required before release |
 | --- | --- | --- |
-| Critical | The app uses undocumented YouTube/YouTube Music InnerTube endpoints and supports background playback. YouTube's [Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented APIs without express permission and prohibit background audio playback for API Clients (sections III.E.4 and III.E.6). | Treat public distribution as blocked until provider-policy applicability/permission is resolved or the integration is replaced with permitted sources. See [InnerTube notes](INNER_TUBE_NOTES.md). |
+| Critical | The published app uses undocumented YouTube/YouTube Music InnerTube endpoints and supports background playback. YouTube's [Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented APIs without express permission and prohibit background audio playback for API Clients (sections III.E.4 and III.E.6). | This release was published at the project owner's direction. Resolve provider-policy applicability/permission or replace the integration before further distribution. See [InnerTube notes](INNER_TUBE_NOTES.md). |
 | Critical | Music, artwork, lyrics, and provider terms/rights have not been independently cleared for redistribution or public release. | Confirm rights and applicable service terms for every source and asset. |
 | High | The latest lint pass has no errors, with 49 warnings and 1 hint remaining. Most warnings concern available dependency updates and deprecations; they still need a reviewed disposition. | Review warnings and current dependency advisories before release; don't use a baseline to conceal findings. |
 | High | No dependency vulnerability/SBOM/license scan is configured. | Run a current advisory scan and generate a complete transitive dependency/license inventory. |
@@ -37,7 +37,8 @@
 | Current release build | **Pass** | `.\gradlew.bat test lint assembleRelease bundleRelease` completed successfully on 2026-10-07. The APK uses the locally configured release certificate; retain the private key securely. |
 | Release APK/AAB tasks | **Pass, signed** | `test lint assembleRelease bundleRelease` completed successfully. APK verification passed with `apksigner`; AAB verification passed with `jarsigner`. The release was not installed or exercised on a clean device. |
 | Device playback | **Not verified** | A connected Android device is available, but full stream, seek, retry, background, notification, lock-screen, Bluetooth, and long-session scenarios were not run here. |
-| Store readiness | **Not verified** | No Play Console access, listing, internal track, signed bundle, Data Safety submission, or review status was available. |
+| GitHub APK release | **Triggered** | Tag `v1.0.0` invokes `.github/workflows/publish-apk.yml` to create the GitHub Release with the signed APK and SHA-256 file. Confirm the workflow completes successfully on GitHub. |
+| Store readiness | **Not verified** | No Play Console access, listing, internal track, Data Safety submission, or review status was available. |
 
 ## Release gate
 
