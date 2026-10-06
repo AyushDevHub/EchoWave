@@ -1,37 +1,36 @@
-# Credits & Licenses
+# Credits and third-party notices
 
-EchoWave is GPL-3.0 (see LICENSE). GitHub APK releases include source.
+EchoWave is distributed under the GNU General Public License, version 3. See [LICENSE](LICENSE). This file records code included in EchoWave, code adapted from other projects, dependencies, and reference-only work.
 
-Donors / inspiration — appreciation + license compliance:
+## Included or adapted code
 
-- team-spotube/spotube — BSD-4-Clause. Concept reference only (plugin-style
-  source abstraction, Flutter/Dart so no direct Kotlin reuse). Preserve BSD
-  attribution if any logic is ported.
-- EchoMusicApp/Echo-Music — GPL-3.0. Primary donor for `innertube/` search +
-  player endpoints + decipher, `playback/` service patterns, BravePipe backup
-  engine mention, LRCLIB lyrics reference. Any ported files keep their headers
-  and remain GPL-3.0.
-- Clash-Projects/LastWave-native — GPL-3.0. Donor for Kotlin + Compose +
-  Media3 + MVVM/Clean + Room/DataStore/Hilt structure, queue/shuffle/repeat,
-  scrobbler/discovery concepts (not MVP).
-- NewPipe Extractor (Team NewPipe, GPL-3.0) — optional fallback resolver pattern.
-- BravePipe project — backup decipher/playback concept credited by Echo-Music.
-  NOT used anywhere in EchoWave (donor commented it out too).
+### Echo-Music
 
-## PO-token + stream pipeline (Echo-Music approach, GPL-3.0)
+[EchoMusicApp/Echo-Music](https://github.com/EchoMusicApp/Echo-Music) is the primary code donor. It is licensed under GPL-3.0. The following material is included or adapted in EchoWave:
 
-- `app/src/main/assets/po_token.html` vendored verbatim from Echo-Music
-  (BotGuard WebView bootstrap JS), plus attribution header. Rest is a
-  clean-room port of their policy, not their code:
-  `PoTokenCache`/`WebViewPoTokenProvider` (session pot, 8 s timeout,
-  expiry margin, prewarm), `JsCodec` (challenge/integrity/u8 codecs),
-  `PlayerClient` (c/cver fetch dressing + range sizes).
-- Stream extractor/cipher catalog reused as a dependency, not ported:
-  `com.github.MetrolistGroup.innertubex:innertubex-android:v0.7.0`
-  (JitPack; upstream license applies — GPL-3.0 family).
-- NewPipeExtractor + PipePipe extractor lineage acknowledged via the above.
+- `app/src/main/assets/po_token.html` is vendored verbatim. Its attribution header is retained.
+- InnerTube stream resolution policy and client ordering are adapted in `data/remote/innertube/`.
+- Client identity and stream-fetch header policy are adapted in `data/remote/innertube/PlayerClient.kt`.
+- BotGuard and PO-token handling policy is adapted in `data/remote/potoken/`; `JsCodec` and the WebView provider are EchoWave Kotlin implementations of that policy.
+- Signature-cipher and `n`-parameter handling follows the donor's documented resolver approach; implementation comments identify the relevant donor.
+- Bounded range fetching and media request dressing in `data/playback/` follow the donor's stream pipeline approach.
 
-YouTube / YouTube Music are trademarks of Google. EchoWave hosts no media,
-provides no catalog itself, and is not affiliated with Google, Spotify, Apple,
-or Last.fm. Source-layer breakage is expected; that is why `MusicSource` /
-`StreamResolver` are replaceable.
+EchoWave's own Kotlin files are not verbatim copies unless stated above. Files that identify a donor in their source comments should be read with this attribution and the GPL-3.0 terms.
+
+## Reference-only projects
+
+- [Spotube](https://github.com/KRTirtho/spotube) — BSD-4-Clause. The plugin-style source abstraction was considered as an architectural reference. No Spotube code is included.
+- [LastWave-native](https://github.com/Clash-Projects/LastWave-native) — GPL-3.0. Kotlin, Compose, Media3, and layered architecture were considered as references. No LastWave-native code is included.
+- [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor) — GPL-3.0. Its extractor ecosystem is acknowledged as background for a possible fallback; no NewPipe code or dependency is currently included.
+- BravePipe — a possible fallback concept mentioned in donor research. EchoWave's `BravePipeFallbackResolver` is only an unimplemented stub; no BravePipe code is included.
+- Echo-Music also informed investigation of LRCLIB lyrics integration. EchoWave does not currently include a lyrics implementation or LRCLIB client.
+
+## Dependencies
+
+The `innertubex` coordinate appears in the version catalog as a reference, but its dependency was reverted and is commented out in `app/build.gradle.kts`. It is not packaged in EchoWave. No `innertubex` source code has been copied into this project.
+
+Other application dependencies are declared in `gradle/libs.versions.toml` and `app/build.gradle.kts`; their notices and licenses remain with their respective projects and artifacts.
+
+## Trademarks and service names
+
+YouTube, YouTube Music, Google, Spotify, Apple, and other product names are trademarks of their respective owners. EchoWave is an independent project and is not endorsed by or affiliated with those services. EchoWave does not host music or other provider media.

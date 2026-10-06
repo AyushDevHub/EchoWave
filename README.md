@@ -1,91 +1,60 @@
 # EchoWave
 
-Clean, open-source Android music player. Kotlin + Jetpack Compose + Material 3 + Media3.
+**A clean, open source Android music player built with Kotlin, Jetpack Compose, and Media3.**
 
-MVP: search music from a YouTube-Music-compatible source, resolve playable
-streams, play reliably in background with notification / lock-screen, modern
-mini-player + Now Playing + queue.
+EchoWave brings search, queue-based playback, and background listening together in a small Android app. It resolves streams from compatible providers and plays them through Android's media session, including notification and lock-screen controls.
 
-EchoWave is GPL-3.0 — see `LICENSE`, `CREDITS.md`, and License below.
-APK distribution via GitHub Releases (no Play Store).
+> GPL-3.0 licensed. See [LICENSE](LICENSE) and [CREDITS.md](CREDITS.md).
 
-## MVP flow
+## What it does
 
-Open -> Home -> Search -> results -> tap -> resolve stream -> ExoPlayer ->
-mini-player -> Now Playing -> background -> notification/lock.
+| Area | Included |
+| --- | --- |
+| Search | Search tracks and browse results |
+| Playback | Queue, seek, previous and next, shuffle, repeat, and automatic advance |
+| Background audio | Media session, system notification, and lock-screen controls |
+| Stream handling | Resolver chain, client-specific request headers, and bounded range fetching |
+| Library | Local persistence for saved tracks and listening history |
 
-## Status
-
-P0 playback verified on-device: search, resolve (measured client catalog +
-pre-flight validation), ranged dressed fetch, queue, seek, prev/next,
-skip-on-failure advance, auto-advance, background/notification/lock-screen.
+Provider behavior can change independently of the app. Resolver fallbacks are currently scaffolding and may not return a stream.
 
 ## Build
+
+Requirements: Android Studio with the project-compatible Android SDK and JDK.
 
 ```sh
 ./gradlew assembleDebug
 ./gradlew test
 ```
 
-Install with `./gradlew installDebug`.
+Install a debug build on a connected device with:
 
-## Architecture
-
-See `ARCHITECTURE.md`. The rule:
-
-```text
-SEARCH/METADATA != STREAM RESOLUTION != PLAYBACK != UI
+```sh
+./gradlew installDebug
 ```
 
-UI observes `PlaybackController.state` and never touches ExoPlayer. Sources
-live behind `MusicSource` + `StreamResolver` (chained primary + fallbacks).
-AI lives in `features/ai/` and depends on core, never the reverse.
+## Project structure
 
-## Credits
+```text
+domain/       playback models, repository contracts, and source interfaces
+data/         local storage, provider clients, stream resolution, and playback data sources
+playback/     Media3 service, session connection, and queue command routing
+features/     user-facing features, including the isolated AI feature boundary
+ui/           Compose screens and reusable components
+```
 
-EchoWave stands on open-source work. Full details in `CREDITS.md`.
+The UI observes `PlaybackController.state`; it does not access ExoPlayer directly. Music sources implement `MusicSource`, stream providers implement `StreamResolver`, and `AppContainer` binds them. See [ARCHITECTURE.md](ARCHITECTURE.md) for more detail.
 
-- **EchoMusicApp/Echo-Music** (GPL-3.0) — primary donor. Stream pipeline
-  thinking, InnerTube client catalog values, WebView BotGuard PO-token flow
-  (`po_token.html` vendored verbatim + attribution header), cipher/n-transform
-  policy, `PlayerClient` fetch dressing, bounded-range fetching, visitorData
-  plumbing. Thank you.
-- **MetrolistGroup/InnerTubeX** (upstream license applies, GPL-3.0 family) —
-  extractor/cipher client catalog reference (`innertubex-android` coordinate
-  kept for the stream-pipeline step).
-- **TeamNewPipe NewPipeExtractor + PipePipe extractor** (GPL-3.0) — extractor
-  lineage the donors (and our fallback concepts) build on.
-- **team-spotube/spotube** (BSD-4-Clause) — plugin-style source-abstraction
-  concept only; no code reused.
-- **Clash-Projects/LastWave-native** (GPL-3.0) — Kotlin + Compose + Media3 +
-  Clean Architecture reference for the app skeleton.
-- **BravePipe** — credited by Echo-Music; **not used anywhere in EchoWave**.
+## Attribution
 
-If we missed an attribution, open an issue and it will be fixed promptly.
+EchoWave includes and adapts work from other projects. The [credits and license notes](CREDITS.md) identify the exact vendored file, ports, dependency status, and reference-only material. In brief:
 
-## Legal disclaimer & terms of use
+- `po_token.html` is vendored from **Echo-Music** under GPL-3.0, with its attribution retained.
+- Stream-client values and parts of the InnerTube and BotGuard stream pipeline are adapted from **Echo-Music**; relevant Kotlin files identify the port in their headers.
+- **NewPipe Extractor** and **BravePipe** are currently names for unimplemented fallback stubs; their code is not included.
+- **Spotube** and **LastWave-native** informed architecture choices only; no code from those projects is included.
+- The `innertubex` artifact is not an active dependency.
 
-1. **Free, open-source, non-commercial.** Educational / personal-use project.
-   No ads, no premium features, no subscriptions, no sale.
-2. **No hosting.** EchoWave hosts, uploads, and stores no audio, video, or
-   copyrighted material. All content stays on its providers' servers and
-   belongs to its owners. The app only streams publicly accessible links the
-   user requests, much like a specialized browser.
-3. **No affiliation.** Not affiliated with or endorsed by Google, YouTube,
-   YouTube Music, Spotify, Apple, Last.fm, or any music service. All
-   trademarks belong to their respective owners.
-4. **Support creators.** If you listen regularly, a YouTube Premium / YouTube
-   Music subscription is the way to support artists. This project exists to
-   learn modern Android development, not to harm creator revenue.
-5. **Your responsibility.** You are responsible for complying with your local
-   laws and the Terms of Service of services you access. Software is provided
-   "AS IS", without warranty of any kind.
-6. **Copyright contact.** We host no media files, so there is nothing to take
-   down on that front. For concerns about the code itself, open a GitHub issue
-   and it will be addressed.
+## Legal
 
-## License
-
-GPL-3.0 — see `LICENSE`. GitHub APK releases ship alongside the full source,
-as the license requires. Donor files keep their headers and terms; see
-`CREDITS.md` and `NOTICE`.
+EchoWave is an independent project and is not affiliated with Google, YouTube, YouTube Music, Spotify, Apple, or other music services. Service names and trademarks belong to their respective owners. EchoWave does not host or distribute music; users are responsible for complying with applicable laws and service terms. The software is provided under GPL-3.0, without warranty. See [LICENSE](LICENSE), [NOTICE](NOTICE), and [CREDITS.md](CREDITS.md).
