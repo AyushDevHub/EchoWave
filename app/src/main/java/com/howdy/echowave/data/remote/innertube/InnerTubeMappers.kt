@@ -1,0 +1,162 @@
+package com.howdy.echowave.data.remote.innertube
+
+import com.howdy.echowave.domain.model.Track
+import com.howdy.echowave.domain.source.StreamInfo
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+private fun JsonObject.obj(vararg path: String): JsonObject? {
+    var cur: JsonElement = this
+    for (key in path) {
+        cur = (cur as? JsonObject)?.get(key) ?: return null
+    }
+    return cur as? JsonObject
+}
+
+private fun JsonObject.arr(vararg path: String): JsonArray? {
+    var cur: JsonElement = this
+    for (key in path) {
+        cur = (cur as? JsonObject)?.get(key) ?: return null
+    }
+    return cur as? JsonArray
+}
+
+private fun JsonObject.str(key: String): String? =
+    (get(key) as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+
+private fun parseDurationToMs(text: String): Long? {
+    val parts = text.trim().split(":").mapNotNull { it.toLongOrNull() }
+    if (parts.isEmpty()) return null
+    var ms = 0L
+    for (p in parts) ms = ms * 60 + p
+    return ms * 1000
+}
+
+/** visitorData echoed by every InnerTube response; fed back on every request. */
+fun extractVisitorData(root: JsonObject): String? =
+    root.obj("responseContext")?.str("visitorData")
+
+/**
+ * Parses a `search` response into tracks.
+ * Tolerates layout drift: skips items missing a videoId instead of failing all.
+ */
+fun parseSearchResponse(root: JsonObject, limit: Int = 25): List<Track> {
+    val out = mutableListOf<Track>()
+    fun visit(el: JsonElement) {
+        if (out.size >= limit) return
+        when (el) {
+            is JsonObject -> {
+                el["musicResponsiveListItemRenderer"]?.let { item ->
+                    parseListItem(item as JsonObject)?.let { out += it }
+                    return
+                }
+                el.values.forEach { visit(it) }
+            }
+            is JsonArray -> el.forEach { visit(it) }
+            else -> Unit
+        }
+    }
+    visit(root)
+    return out
+}
+
+private fun parseListItem(item: JsonObject): Track? {
+    val flex = item.arr("flexColumns") ?: return null
+    val title = flex.getOrNull(0)?.jsonObject
+        ?.obj("musicResponsiveListItemFlexColumnRenderer")
+        ?.obj("text")?.arr("runs")
+        ?.getOrNull(0)?.jsonObject?.str("text") ?: return null
+
+    var artist = "Unknown artist"
+    var album: String? = null
+    val subRuns = flex.getOrNull(1)?.jsonObject
+        ?.obj("musicResponsiveListItemFlexColumnRenderer")
+        ?.obj("text")?.arr("runs")
+    if (subRuns != null) {
+        val texts = subRuns.mapNotNull { (it as? JsonObject)?.str("text") }
+            .filter { it != " • " }
+        if (texts.isNotEmpty()) artist = texts[0]
+        if (texts.size > 1) album = texts[1]
+    }
+
+    val videoId = item.obj("playlistItemData")?.str("videoId")
+        ?: item.obj("overlay", "musicItemThumbnailOverlayRenderer", "content", "musicPlayButtonRenderer", "playNavigationEndpoint", "watchEndpoint")?.str("videoId")
+        ?: item.obj("navigationEndpoint", "watchEndpoint")?.str("videoId")
+        ?: return null
+
+    val thumbs = item.obj("thumbnail", "musicThumbnailRenderer", "thumbnail")?.arr("thumbnails")
+    val artwork = (thumbs?.lastOrNull() as? JsonObject)?.str("url")
+        ?: (thumbs?.firstOrNull() as? JsonObject)?.str("url")
+
+    val durationText = item.arr("fixedColumns")
+        ?.firstOrNull()?.jsonObject
+        ?.obj("musicResponsiveListItemFixedColumnRenderer")
+        ?.obj("text")?.arr("runs")
+        ?.firstOrNull()?.jsonObject?.str("text")
+    val durationMs = durationText?.let(::parseDurationToMs)
+
+    return Track(
+        id = videoId,
+        title = title,
+        artist = artist,
+        album = album,
+        artworkUrl = artwork,
+        durationMs = durationMs,
+        source = "ytm",
+    )
+}
+
+/** Result of parsing a `player` response. */
+sealed interface PlayerParse {
+    data class Playable(val info: StreamInfo) : PlayerParse
+    data class Unplayable(val reason: String) : PlayerParse
+}
+
+/**
+ * Picks the best audio-only adaptive format with a direct URL.
+ * Signature-ciphered formats need the decipher port (donor: Echo-Music innertube)
+ * and are reported as such instead of silently failing.
+ */
+fun parsePlayerResponse(videoId: String, root: JsonObject): PlayerParse {
+    val status = root.obj("playabilityStatus")?.str("status") ?: "UNKNOWN"
+    if (status != "OK") {
+        val reason = root.obj("playabilityStatus")?.str("reason") ?: status
+        return PlayerParse.Unplayable("playability=$reason")
+    }
+    val formats = root.obj("streamingData")?.arr("adaptiveFormats") ?: JsonArray(emptyList())
+    var ciphered = 0
+    var bestUrl: String? = null
+    var bestMime: String? = null
+    var bestRate = -1
+    for (f in formats) {
+        val o = f as? JsonObject ?: continue
+        val mime = o.str("mimeType") ?: continue
+        if (!mime.startsWith("audio/")) continue
+        val url = o.str("url")
+        if (url == null) {
+            if (o["signatureCipher"] != null) ciphered++
+            continue
+        }
+        val rate = o.jsonObject["bitrate"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+        if (rate > bestRate) {
+            bestRate = rate
+            bestUrl = url
+            bestMime = mime
+        }
+    }
+    if (bestUrl != null) {
+        // Proof-of-Origin token lives OUTSIDE streamingData, in
+        // serviceIntegrityDimensions.poToken. A signed URL without its pot
+        // is rejected with 403 even though sig/sparams are intact.
+        val poToken = root.obj("serviceIntegrityDimensions")?.str("poToken")
+        return PlayerParse.Playable(StreamInfo(videoId, bestUrl, bestMime, poToken = poToken))
+    }
+    return PlayerParse.Unplayable(
+        if (ciphered > 0) "ciphered-only ($ciphered formats need decipher port)"
+        else "no audio formats",
+    )
+}

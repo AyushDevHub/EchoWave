@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // InnerTubeX extractor catalog (MetrolistGroup, JitPack).
+        maven("https://jitpack.io")
     }
 }
 
