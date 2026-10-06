@@ -89,8 +89,11 @@ private fun parseListItem(item: JsonObject): Track? {
         ?: return null
 
     val thumbs = item.obj("thumbnail", "musicThumbnailRenderer", "thumbnail")?.arr("thumbnails")
-    val artwork = (thumbs?.lastOrNull() as? JsonObject)?.str("url")
+    val rawArt = (thumbs?.lastOrNull() as? JsonObject)?.str("url")
         ?: (thumbs?.firstOrNull() as? JsonObject)?.str("url")
+    // Largest thumb, then upscale the size suffix (w60 -> w540) so big
+    // artwork doesn't pixelate; unknown shapes pass through untouched.
+    val artwork = upgradeArtwork(rawArt)
 
     val durationText = item.arr("fixedColumns")
         ?.firstOrNull()?.jsonObject
@@ -109,6 +112,18 @@ private fun parseListItem(item: JsonObject): Track? {
         source = "ytm",
     )
 }
+
+/** Display art at 540px when the URL carries a size suffix (=w60-h60). Pure + tested. */
+fun upgradeArtwork(url: String?): String? {
+    if (url == null) return null
+    return if (ART_SIZE_RE.containsMatchIn(url)) {
+        url.replace(ART_SIZE_RE, "=w540-h540")
+    } else {
+        url
+    }
+}
+
+private val ART_SIZE_RE = Regex("=w\\d+-h\\d+")
 
 /** Result of parsing a `player` response. */
 sealed interface PlayerParse {

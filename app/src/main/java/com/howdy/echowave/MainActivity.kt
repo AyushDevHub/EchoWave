@@ -9,7 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.howdy.echowave.data.local.Appearance
 import com.howdy.echowave.ui.navigation.EchoWaveNavHost
-import com.howdy.echowave.ui.theme.MyApplicationTheme
+import com.howdy.echowave.ui.theme.EchoWaveTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
                 Appearance.LIGHT -> false
                 Appearance.SYSTEM -> systemDark
             }
-            MyApplicationTheme(darkTheme = dark) {
+            EchoWaveTheme(darkTheme = dark) {
                 EchoWaveNavHost(controller = container.playback)
             }
         }

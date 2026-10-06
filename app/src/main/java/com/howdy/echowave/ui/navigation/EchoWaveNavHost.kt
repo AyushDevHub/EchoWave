@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -49,8 +51,18 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     Scaffold(
         bottomBar = {
             Column {
-                MiniPlayer(state, onToggle = controller::toggle, onOpen = { nav.navigate(Routes.NOW_PLAYING) })
-                NavigationBar {
+                MiniPlayer(
+                    state = state,
+                    onToggle = controller::toggle,
+                    onPrevious = controller::previous,
+                    onNext = controller::next,
+                    onOpen = { nav.navigate(Routes.NOW_PLAYING) },
+                )
+                NavigationBar(
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 0.dp,
+                ) {
                     val items = listOf(
                         Triple(Routes.HOME, "Home", Icons.Default.Home),
                         Triple(Routes.SEARCH, "Search", Icons.Default.Search),
@@ -63,6 +75,13 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                             onClick = { nav.navigate(route) { launchSingleTop = true } },
                             icon = { Icon(icon, label) },
                             label = { Text(label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                                unselectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                         )
                     }
                 }
@@ -72,9 +91,16 @@ fun EchoWaveNavHost(controller: PlaybackController) {
         NavHost(nav, startDestination = Routes.HOME, Modifier.padding(padding)) {
             composable(Routes.HOME) {
                 LaunchedEffect(Unit) { libVm.refresh() }
-                HomeScreen(recent = history) { tracks, i ->
-                    scope.launch { controller.play(tracks, i) }
-                }
+                val favs by libVm.favorites.collectAsState()
+                HomeScreen(
+                    recent = history,
+                    favorites = favs,
+                    current = state.currentTrack,
+                    onPlay = { tracks, i ->
+                        scope.launch { controller.play(tracks, i) }
+                    },
+                    onOpenPlayer = { nav.navigate(Routes.NOW_PLAYING) },
+                )
             }
             composable(Routes.SEARCH) {
                 SearchScreen(

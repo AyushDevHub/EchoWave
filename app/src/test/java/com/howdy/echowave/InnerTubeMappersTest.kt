@@ -119,6 +119,15 @@ class InnerTubeMappersTest {
         )
     }
 
+    @Test fun `artwork suffix upscales, unknown shapes pass`() {
+        assertEquals(
+            "https://x/abc=w540-h540",
+            upgradeArtwork("https://x/abc=w60-h60"),
+        )
+        assertEquals("https://x/abc", upgradeArtwork("https://x/abc"))
+        assertEquals(null, upgradeArtwork(null))
+    }
+
     @Test fun `attachPoToken appends once`() {
         val base = com.howdy.echowave.domain.source.StreamInfo("v1", "http://a?x=1", poToken = "T")
         assertEquals("http://a?x=1&pot=T", attachPoToken(base).url)

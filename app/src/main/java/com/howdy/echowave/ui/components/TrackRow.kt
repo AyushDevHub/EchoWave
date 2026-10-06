@@ -14,11 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import com.howdy.echowave.R
 import com.howdy.echowave.core.common.formatDuration
 import com.howdy.echowave.domain.model.Track
 
@@ -28,14 +25,11 @@ fun TrackRow(track: Track, onClick: () -> Unit, trailing: @Composable (() -> Uni
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = track.artworkUrl,
-            contentDescription = "Artwork for ${track.title}",
+        TrackArtwork(
+            url = track.artworkUrl,
+            description = "Artwork for ${track.title}",
             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
             contentScale = ContentScale.Crop,
-            placeholder = painterResource(R.drawable.album),
-            error = painterResource(R.drawable.album),
-            fallback = painterResource(R.drawable.album),
         )
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(
