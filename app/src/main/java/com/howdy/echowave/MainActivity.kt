@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         // Releasing in onStop is what silently broke background control.
         container.sessionConnector.connect()
         setContent {
-            val appearance by container.settingsRepo.appearance.collectAsState(Appearance.SYSTEM)
+            val appearance by container.settingsRepo.appearance.collectAsState(Appearance.DARK)
             val systemDark = isSystemInDarkTheme()
             val dark = when (appearance) {
                 Appearance.DARK -> true

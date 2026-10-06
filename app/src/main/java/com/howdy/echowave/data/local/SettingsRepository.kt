@@ -18,7 +18,7 @@ class SettingsRepository(
             when (prefs[APPEARANCE]) {
                 "dark" -> Appearance.DARK
                 "light" -> Appearance.LIGHT
-                else -> Appearance.SYSTEM
+                else -> Appearance.DARK
             }
         }
 
