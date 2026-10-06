@@ -18,6 +18,10 @@ private class FakeMusic(private val good: Set<String>) : MusicRepository {
 }
 
 private class FakeLibrary : LibraryRepository {
+    override fun observeFavorites(): kotlinx.coroutines.flow.Flow<List<Track>> =
+        kotlinx.coroutines.flow.flowOf(emptyList())
+    override fun observeFavoriteIds(): kotlinx.coroutines.flow.Flow<Set<String>> =
+        kotlinx.coroutines.flow.flowOf(emptySet())
     override suspend fun favorites() = emptyList<Track>()
     override suspend fun toggleFavorite(track: Track) = true
     override suspend fun isFavorite(id: String) = false

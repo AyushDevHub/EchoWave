@@ -13,17 +13,22 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.playback.PlaybackController
 import com.howdy.echowave.ui.home.HomeScreen
 import com.howdy.echowave.ui.library.LibraryScreen
+import com.howdy.echowave.ui.library.LibraryViewModel
 import com.howdy.echowave.ui.player.MiniPlayer
 import com.howdy.echowave.ui.player.NowPlayingScreen
 import com.howdy.echowave.ui.search.SearchScreen
@@ -36,6 +41,10 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     val state by controller.state.collectAsState()
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
+    val repo = (LocalContext.current.applicationContext as EchoWaveApp).container.libraryRepo
+    val libVm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(repo))
+    val favoriteIds by libVm.favoriteIds.collectAsState()
+    val history by libVm.history.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -62,19 +71,29 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     ) { padding ->
         NavHost(nav, startDestination = Routes.HOME, Modifier.padding(padding)) {
             composable(Routes.HOME) {
-                HomeScreen(recent = state.queue) { track ->
-                    scope.launch { controller.play(listOf(track), 0) }
+                LaunchedEffect(Unit) { libVm.refresh() }
+                HomeScreen(recent = history) { tracks, i ->
+                    scope.launch { controller.play(tracks, i) }
                 }
             }
             composable(Routes.SEARCH) {
-                SearchScreen(onPlay = { tracks, i ->
-                    android.util.Log.d("EchoWavePlay", "tap trackId=${tracks.getOrNull(i)?.id} index=$i")
+                SearchScreen(
+                    onPlay = { tracks, i ->
+                        android.util.Log.d("EchoWavePlay", "tap trackId=${tracks.getOrNull(i)?.id} index=$i")
+                        scope.launch { controller.play(tracks, i) }
+                    },
+                    favoriteIds = favoriteIds,
+                    onToggleFavorite = libVm::toggle,
+                )
+            }
+            composable(Routes.LIBRARY) {
+                LibraryScreen(onPlay = { tracks, i ->
                     scope.launch { controller.play(tracks, i) }
                 })
             }
-            composable(Routes.LIBRARY) { LibraryScreen() }
             composable(Routes.SETTINGS) { SettingsScreen() }
             composable(Routes.NOW_PLAYING) {
+                val current = state.currentTrack
                 NowPlayingScreen(
                     state = state,
                     onToggle = controller::toggle,
@@ -86,6 +105,12 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     onRetry = {
                         val s = controller.state.value
                         scope.launch { controller.play(s.queue, s.queueIndex) }
+                    },
+                    isFavorite = current?.id in favoriteIds,
+                    onToggleFavorite = { current?.let { libVm.toggle(it) } },
+                    onPlayQueueAt = { i ->
+                        val s = controller.state.value
+                        scope.launch { controller.play(s.queue, i) }
                     },
                 )
             }

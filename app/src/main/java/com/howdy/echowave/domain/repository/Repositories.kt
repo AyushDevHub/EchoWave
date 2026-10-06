@@ -3,6 +3,7 @@ package com.howdy.echowave.domain.repository
 import com.howdy.echowave.core.common.AppResult
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.source.StreamInfo
+import kotlinx.coroutines.flow.Flow
 
 interface MusicRepository {
     suspend fun search(query: String): AppResult<List<Track>>
@@ -10,6 +11,8 @@ interface MusicRepository {
 }
 
 interface LibraryRepository {
+    fun observeFavorites(): Flow<List<Track>>
+    fun observeFavoriteIds(): Flow<Set<String>>
     suspend fun favorites(): List<Track>
     suspend fun toggleFavorite(track: Track): Boolean
     suspend fun isFavorite(id: String): Boolean

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.howdy.echowave.data.local.EchoWaveDb
+import com.howdy.echowave.data.local.SettingsRepository
 import com.howdy.echowave.data.remote.fallback.BravePipeFallbackResolver
 import com.howdy.echowave.data.remote.fallback.NewPipeFallbackResolver
 import com.howdy.echowave.data.remote.innertube.InnerTubeMusicSource
@@ -96,6 +97,7 @@ class AppContainer(ctx: Context) {
 
     val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver) }
     val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao()) }
+    val settingsRepo by lazy { SettingsRepository(prefs) }
     val recommendations by lazy { NoOpRecommendationProvider() }
 
     val playback by lazy { Media3PlaybackController(musicRepo, libraryRepo) }
