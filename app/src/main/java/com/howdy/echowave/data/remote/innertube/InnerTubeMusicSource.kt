@@ -18,7 +18,7 @@ class InnerTubeMusicSource(
     override val name = "innertube-primary"
 
     override suspend fun search(query: String, limit: Int): AppResult<List<Track>> {
-        android.util.Log.d("EchoWaveSearch", "search start q=$query")
+        android.util.Log.d("EchoWaveSearch", "search start")
         return try {
             val root = api.search(
                 clientId = INNERTUBE_CLIENT_ID,
@@ -29,7 +29,7 @@ class InnerTubeMusicSource(
                 android.util.Log.d("EchoWaveSearch", "visitorData refreshed")
             }
             val tracks = parseSearchResponse(root, limit)
-            android.util.Log.d("EchoWaveSearch", "search OK q=$query count=${tracks.size}")
+            android.util.Log.d("EchoWaveSearch", "search OK count=${tracks.size}")
             AppResult.Ok(tracks)
         } catch (e: Exception) {
             AppResult.Err(

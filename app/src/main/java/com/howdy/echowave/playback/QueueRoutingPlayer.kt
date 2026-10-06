@@ -2,6 +2,7 @@ package com.howdy.echowave.playback
 
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Routes session prev/next (notification, lock screen, headset) to the
@@ -9,6 +10,7 @@ import androidx.media3.common.Player
  * commands exactly when the queue has somewhere to go, so notification
  * and lock screen show the right actions.
  */
+@UnstableApi
 class QueueRoutingPlayer(wrapped: Player) : ForwardingPlayer(wrapped) {
     override fun seekToNext() {
         val custom = PlaybackRouter.onNext

@@ -4,6 +4,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.common.util.UnstableApi
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.data.playback.ChunkedDataSource
 import com.howdy.echowave.data.playback.DressedDataSource
@@ -13,6 +14,7 @@ import com.howdy.echowave.data.playback.DressedDataSource
  * Media bytes go through [DressedDataSource]: per-URL client dressing
  * (donor PlayerClient rule) + safe fetch diagnostics.
  */
+@UnstableApi
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
 

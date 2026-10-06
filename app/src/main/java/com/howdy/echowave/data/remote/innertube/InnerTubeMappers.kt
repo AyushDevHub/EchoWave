@@ -74,6 +74,7 @@ private fun parseListItem(item: JsonObject): Track? {
     var artist = "Unknown artist"
     var album: String? = null
     var isVideo = false
+    var isEpisode = false
     val subRuns = flex.getOrNull(1)?.jsonObject
         ?.obj("musicResponsiveListItemFlexColumnRenderer")
         ?.obj("text")?.arr("runs")
@@ -84,13 +85,18 @@ private fun parseListItem(item: JsonObject): Track? {
             .filterNot { it.isEmpty() || it in setOf("•", "â€¢", "·", "|") }
         val kind = parts.firstOrNull()?.lowercase()
         val hasItemKind = kind in setOf("song", "video", "album", "playlist", "artist")
+        val rawSub = subRuns.mapNotNull { (it as? JsonObject)?.str("text") }.joinToString("")
         // Video results declare kind "Video" or show view counts ("1.2M views").
-        isVideo = kind == "video" ||
-            subRuns.mapNotNull { (it as? JsonObject)?.str("text") }
-                .joinToString("").contains("view", ignoreCase = true)
+        // Episodes declare kind "Episode" or mention podcast/episode.
+        isVideo = kind == "video" || rawSub.contains("view", ignoreCase = true)
+        isEpisode = !isVideo && (
+            kind == "episode" ||
+                rawSub.contains("episode", ignoreCase = true) ||
+                rawSub.contains("podcast", ignoreCase = true)
+            )
         val artistIndex = if (hasItemKind) 1 else 0
         parts.getOrNull(artistIndex)?.let { artist = it }
-        parts.getOrNull(artistIndex + 1)?.let { if (!isVideo) album = it }
+        parts.getOrNull(artistIndex + 1)?.let { if (!isVideo && !isEpisode) album = it }
     }
 
     val videoId = item.obj("playlistItemData")?.str("videoId")
@@ -121,6 +127,7 @@ private fun parseListItem(item: JsonObject): Track? {
         durationMs = durationMs,
         source = "ytm",
         isVideo = isVideo,
+        isEpisode = isEpisode,
     )
 }
 
@@ -134,7 +141,95 @@ fun upgradeArtwork(url: String?): String? {
     }
 }
 
+/**
+ * New-release / chart albums: musicTwoRowItemRenderer cards.
+ * browseId from navigationEndpoint, artist from subtitle runs. Pure + tested.
+ */
+fun parseTwoRowAlbums(root: JsonObject, limit: Int = 25): List<com.howdy.echowave.domain.model.Album> {
+    val out = mutableListOf<com.howdy.echowave.domain.model.Album>()
+    fun visit(el: JsonElement) {
+        if (out.size >= limit) return
+        when (el) {
+            is JsonObject -> {
+                el["musicTwoRowItemRenderer"]?.let { item ->
+                    parseTwoRowAlbum(item as JsonObject)?.let { out += it }
+                    return
+                }
+                el.values.forEach { visit(it) }
+            }
+            is JsonArray -> el.forEach { visit(it) }
+            else -> Unit
+        }
+    }
+    visit(root)
+    return out
+}
+
+private fun parseTwoRowAlbum(item: JsonObject): com.howdy.echowave.domain.model.Album? {
+    val title = item.obj("title")?.arr("runs")
+        ?.firstOrNull()?.jsonObject?.str("text") ?: return null
+    val subRuns = item.obj("subtitle")?.arr("runs") ?: return null
+    val texts = subRuns.mapNotNull { (it as? JsonObject)?.str("text") }
+        .filter { it != " • " }
+    val artist = texts.getOrNull(1) ?: texts.firstOrNull() ?: return null
+    val browseId = item.obj("navigationEndpoint")?.obj("browseEndpoint")?.str("browseId")
+        ?: return null
+    val thumbs = item.obj("thumbnailRenderer")
+        ?.obj("musicThumbnailRenderer")
+        ?.obj("thumbnail")?.arr("thumbnails")
+        ?: item.obj("thumbnail")?.arr("thumbnails")
+    val art = (thumbs?.lastOrNull() as? JsonObject)?.str("url")
+    return com.howdy.echowave.domain.model.Album(
+        id = browseId,
+        title = title,
+        artist = artist,
+        artworkUrl = upgradeArtwork(art),
+    )
+}
+
 private val ART_SIZE_RE = Regex("=w\\d+-h\\d+")
+
+/**
+ * Mood & genre buttons: gridRenderer.musicNavigationButtonRenderer cards.
+ * browseId (+params) from clickCommand; stripe color when present.
+ * Pure + tested.
+ */
+fun parseMoodGenres(root: JsonObject, limit: Int = 40): List<com.howdy.echowave.domain.model.Genre> {
+    val out = mutableListOf<com.howdy.echowave.domain.model.Genre>()
+    fun visit(el: JsonElement) {
+        if (out.size >= limit) return
+        when (el) {
+            is JsonObject -> {
+                el["musicNavigationButtonRenderer"]?.let { item ->
+                    parseMoodGenre(item as JsonObject)?.let { out += it }
+                    return
+                }
+                el.values.forEach { visit(it) }
+            }
+            is JsonArray -> el.forEach { visit(it) }
+            else -> Unit
+        }
+    }
+    visit(root)
+    return out
+}
+
+private fun parseMoodGenre(item: JsonObject): com.howdy.echowave.domain.model.Genre? {
+    val title = item.obj("buttonText")?.arr("runs")
+        ?.firstOrNull()?.jsonObject?.str("text") ?: return null
+    val endpoint = item.obj("clickCommand")?.obj("browseEndpoint") ?: return null
+    val browseId = endpoint.str("browseId") ?: return null
+    val params = endpoint.str("params")
+    val color = item.obj("solid")?.let {
+        it["leftStripeColor"]?.jsonPrimitive?.content?.toLongOrNull()
+    }
+    return com.howdy.echowave.domain.model.Genre(
+        id = browseId,
+        title = title,
+        color = color,
+        params = params,
+    )
+}
 
 /** Result of parsing a `player` response. */
 sealed interface PlayerParse {

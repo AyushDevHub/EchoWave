@@ -1,13 +1,18 @@
 package com.howdy.echowave.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -15,8 +20,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -34,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,26 +73,95 @@ fun LibraryScreen(
         PlaylistDetailScreen(playlist, vm, { selectedPlaylist = null }, onPlay)
         return
     }
+    var section by remember { mutableStateOf(LibrarySection.PLAYLISTS) }
     Column(Modifier.fillMaxSize()) {
-        Text("Library")
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Playlists", modifier = Modifier.weight(1f))
+        Row(
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 18.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Your Library", style = MaterialTheme.typography.headlineLarge)
+                Text("${playlists.size} playlists | ${favorites.size} favorites",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             IconButton(onClick = { showCreate = true }) {
-                Icon(Icons.Default.Add, contentDescription = "New playlist")
+                Icon(Icons.Default.Add, contentDescription = "New playlist", tint = MaterialTheme.colorScheme.primary)
             }
         }
-        if (playlists.isEmpty()) Text("No playlists yet — create one above.")
-        playlists.forEach { p ->
-            Row(
-                Modifier.fillMaxWidth().clickable { selectedPlaylist = p }.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(p.name)
-                    Text("${p.trackCount} tracks")
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(4.dp),
+        ) {
+            LibrarySection.entries.forEach { tab ->
+                val selected = section == tab
+                Surface(
+                    onClick = { section = tab },
+                    shape = RoundedCornerShape(24.dp),
+                    color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(tab.label, style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(vertical = 12.dp))
+                    }
                 }
-                IconButton(onClick = { vm.deletePlaylist(p.id) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete playlist")
+            }
+        }
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 20.dp)) {
+            when (section) {
+                LibrarySection.PLAYLISTS -> {
+                    if (playlists.isEmpty()) item {
+                        LibraryEmptyState("Start your collection", "Create a playlist and keep your favorite tracks together.")
+                    } else items(playlists, key = { "playlist-${it.id}" }) { playlist ->
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
+                                .clickable { selectedPlaylist = playlist },
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(64.dp).clip(RoundedCornerShape(18.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Default.LibraryMusic, contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+                                }
+                                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                    Text(playlist.name, style = MaterialTheme.typography.titleMedium)
+                                    Text("${playlist.trackCount} tracks", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyMedium)
+                                }
+                                IconButton(onClick = { vm.deletePlaylist(playlist.id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete ${playlist.name}",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+                LibrarySection.FAVORITES -> {
+                    if (favorites.isEmpty()) item {
+                        LibraryEmptyState("Songs you love", "Tap the heart on any track to save it here.")
+                    } else items(favorites.indices.toList(), key = { "favorite-${favorites[it].id}" }) { i ->
+                        TrackRow(favorites[i], onClick = { onPlay(favorites, i) }) {
+                            IconButton(onClick = { vm.toggle(favorites[i]) }) {
+                                Icon(Icons.Default.Favorite, contentDescription = "Remove favorite",
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        LibraryRowDivider()
+                    }
+                }
+                LibrarySection.HISTORY -> {
+                    if (history.isEmpty()) item {
+                        LibraryEmptyState("Your listening history", "Tracks you play will appear here.")
+                    } else items(history.indices.toList(), key = { "history-${history[it].id}" }) { i ->
+                        TrackRow(history[i], onClick = { onPlay(history, i) })
+                        LibraryRowDivider()
+                    }
                 }
             }
         }
@@ -110,25 +189,27 @@ fun LibraryScreen(
                 },
             )
         }
-        Text("Favorites (${favorites.size})")
-        if (favorites.isEmpty()) Text("Tap the heart on any track to keep it here.")
-        LazyColumn(Modifier.weight(1f)) {
-            items(favorites.indices.toList()) { i ->
-                TrackRow(favorites[i], onClick = { onPlay(favorites, i) }) {
-                    IconButton(onClick = { vm.toggle(favorites[i]) }) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Unfavorite")
-                    }
-                }
-            }
-        }
-        Text("History")
-        if (history.isEmpty()) Text("Nothing played yet.")
-        LazyColumn(Modifier.weight(1f)) {
-            items(history.indices.toList()) { i ->
-                TrackRow(history[i], onClick = { onPlay(history, i) })
-            }
-        }
     }
+}
+
+private enum class LibrarySection(val label: String) { PLAYLISTS("Playlists"), FAVORITES("Favorites"), HISTORY("History") }
+
+@Composable
+private fun LibraryEmptyState(title: String, subtitle: String) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(subtitle, modifier = Modifier.padding(top = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun LibraryRowDivider() {
+    androidx.compose.material3.HorizontalDivider(
+        Modifier.padding(start = 78.dp, end = 16.dp),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+    )
 }
 
 @Composable

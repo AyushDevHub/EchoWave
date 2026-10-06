@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 
@@ -11,6 +12,7 @@ import com.google.common.util.concurrent.MoreExecutors
  * Binds UI process to [PlaybackService]. Owned by MainActivity,
  * attached to [Media3PlaybackController] on connect.
  */
+@UnstableApi
 class PlaybackSessionConnector(
     private val appContext: Context,
     private val controller: Media3PlaybackController,

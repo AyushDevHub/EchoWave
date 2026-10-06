@@ -42,6 +42,14 @@ class LyricsTest {
         assertNull(repo.parseLrclib("not json"))
     }
 
+    @Test fun `word index follows position inside line`() {
+        val words = listOf(LrcWord(1000, "Hel "), LrcWord(1500, "lo"))
+        assertEquals(-1, currentLrcWordIndex(words, 999))
+        assertEquals(0, currentLrcWordIndex(words, 1000))
+        assertEquals(1, currentLrcWordIndex(words, 2000))
+        assertEquals(-1, currentLrcWordIndex(emptyList(), 5000))
+    }
+
     @Test fun `word-sync inline tags strip to clean lines`() {
         val lines = parseLrc("[00:01.00]<00:01.00>Hel <00:01.50>lo world")
         assertEquals(1, lines.size)

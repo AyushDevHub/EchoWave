@@ -4,10 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.howdy.echowave.data.local.Appearance
+import com.howdy.echowave.data.local.ThemePreset
 import com.howdy.echowave.ui.navigation.EchoWaveNavHost
 import com.howdy.echowave.ui.theme.EchoWaveTheme
 
@@ -21,14 +20,8 @@ class MainActivity : ComponentActivity() {
         // Releasing in onStop is what silently broke background control.
         container.sessionConnector.connect()
         setContent {
-            val appearance by container.settingsRepo.appearance.collectAsState(Appearance.DARK)
-            val systemDark = isSystemInDarkTheme()
-            val dark = when (appearance) {
-                Appearance.DARK -> true
-                Appearance.LIGHT -> false
-                Appearance.SYSTEM -> systemDark
-            }
-            EchoWaveTheme(darkTheme = dark) {
+            val themePreset by container.settingsRepo.themePreset.collectAsState(ThemePreset.PURPLE)
+            EchoWaveTheme(preset = themePreset) {
                 EchoWaveNavHost(controller = container.playback)
             }
         }

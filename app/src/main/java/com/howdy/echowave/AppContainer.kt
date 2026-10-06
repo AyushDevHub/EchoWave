@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.howdy.echowave.data.local.EchoWaveDb
+import com.howdy.echowave.data.local.SearchHistoryRepository
 import com.howdy.echowave.data.local.SettingsRepository
 import com.howdy.echowave.data.remote.fallback.BravePipeFallbackResolver
 import com.howdy.echowave.data.remote.fallback.NewPipeFallbackResolver
@@ -19,6 +20,7 @@ import com.howdy.echowave.data.remote.innertube.VisitorBootstrap
 import com.howdy.echowave.data.remote.innertube.VisitorStore
 import com.howdy.echowave.data.remote.innertube.buildInnerTubeApi
 import com.howdy.echowave.data.remote.lyrics.LyricsRepository
+import com.howdy.echowave.data.repository.DiscoveryRepositoryImpl
 import com.howdy.echowave.data.remote.potoken.WebViewPoTokenProvider
 import com.howdy.echowave.data.repository.LibraryRepositoryImpl
 import com.howdy.echowave.playback.PlaybackSessionConnector
@@ -101,7 +103,9 @@ class AppContainer(ctx: Context) {
     }
 
     val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver) }
+    val discoveryRepo by lazy { DiscoveryRepositoryImpl(innerTubeApi, visitorStore) }
     val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao(), db.playlistDao()) }
+    val historyRepo by lazy { SearchHistoryRepository(prefs) }
     val lyricsRepo by lazy { LyricsRepository() }
     val settingsRepo by lazy { SettingsRepository(prefs) }
     val recommendations by lazy { NoOpRecommendationProvider() }

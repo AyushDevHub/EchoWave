@@ -1,7 +1,18 @@
 package com.howdy.echowave.ui.navigation
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -13,10 +24,14 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +43,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.playback.PlaybackController
+import com.howdy.echowave.ui.discover.ChartsScreen
+import com.howdy.echowave.ui.discover.DiscoverViewModel
+import com.howdy.echowave.ui.discover.MoodsScreen
+import com.howdy.echowave.ui.discover.NewReleasesScreen
 import com.howdy.echowave.ui.home.HomeScreen
 import com.howdy.echowave.ui.library.LibraryScreen
 import com.howdy.echowave.ui.library.LibraryViewModel
@@ -45,16 +64,21 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
     val repo = (LocalContext.current.applicationContext as EchoWaveApp).container
+    val displayName by repo.settingsRepo.displayName.collectAsState("")
+    val greetingEnabled by repo.settingsRepo.greetingEnabled.collectAsState(true)
+    val musicPreferences by repo.settingsRepo.musicPreferences.collectAsState("")
     val libVm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(repo.libraryRepo))
     val favoriteIds by libVm.favoriteIds.collectAsState()
     val history by libVm.history.collectAsState()
     val playlists by libVm.playlists.collectAsState()
     val lyricsVm: LyricsViewModel = viewModel(factory = LyricsViewModel.Factory(repo.lyricsRepo))
     val lyricsUi by lyricsVm.ui.collectAsState()
+    val discoverVm: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory(repo.discoveryRepo))
+    val discoverUi by discoverVm.ui.collectAsState()
 
     Scaffold(
         bottomBar = {
-            Column {
+            if (entry?.destination?.route != Routes.NOW_PLAYING) Column {
                 MiniPlayer(
                     state = state,
                     onToggle = controller::toggle,
@@ -62,8 +86,13 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     onNext = controller::next,
                     onOpen = { nav.navigate(Routes.NOW_PLAYING) },
                 )
+                Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
                 NavigationBar(
-                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.widthIn(max = 390.dp).align(Alignment.Center)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(28.dp)),
+                    windowInsets = WindowInsets(0.dp),
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
                     contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     tonalElevation = 0.dp,
                 ) {
@@ -89,25 +118,84 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                         )
                     }
                 }
+                }
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = Routes.HOME, Modifier.padding(padding)) {
+        NavHost(
+            nav,
+            startDestination = Routes.HOME,
+            modifier = Modifier.padding(padding),
+            enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 18 } },
+            exitTransition = { fadeOut(tween(140)) },
+            popEnterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { -it / 18 } },
+            popExitTransition = { fadeOut(tween(140)) },
+        ) {
             composable(Routes.HOME) {
-                LaunchedEffect(Unit) { libVm.refresh() }
+                var tasteTracks by remember { mutableStateOf(emptyList<com.howdy.echowave.domain.model.Track>()) }
+                var tasteLoading by remember { mutableStateOf(false) }
+                LaunchedEffect(musicPreferences) {
+                    val query = musicPreferences.trim()
+                    if (query.isBlank()) {
+                        tasteTracks = emptyList()
+                        tasteLoading = false
+                    } else {
+                        tasteLoading = true
+                        tasteTracks = when (val result = repo.musicRepo.search(query)) {
+                            is com.howdy.echowave.core.common.AppResult.Ok -> result.value
+                            is com.howdy.echowave.core.common.AppResult.Err -> emptyList()
+                        }
+                        tasteLoading = false
+                    }
+                }
+                LaunchedEffect(Unit) {
+                    libVm.refresh()
+                    discoverVm.refresh()
+                }
                 val favs by libVm.favorites.collectAsState()
                 HomeScreen(
                     recent = history,
                     favorites = favs,
                     current = state.currentTrack,
+                    queue = state.queue,
+                    queueIndex = state.queueIndex,
+                    charts = discoverUi.charts,
+                    albums = discoverUi.albums,
+                    moods = discoverUi.moods,
+                    displayName = displayName,
+                    greetingEnabled = greetingEnabled,
+                    personalizedTracks = tasteTracks,
+                    preferenceLoading = tasteLoading,
                     onPlay = { tracks, i ->
                         scope.launch { controller.play(tracks, i) }
                     },
                     onOpenPlayer = { nav.navigate(Routes.NOW_PLAYING) },
+                    onSeeAllCharts = { nav.navigate(Routes.CHARTS) },
+                    onSeeAllAlbums = { nav.navigate(Routes.NEW_RELEASES) },
+                    onSeeAllMoods = { nav.navigate(Routes.MOODS) },
+                    onPlayAlbum = { album ->
+                        scope.launch {
+                            when (val r = repo.discoveryRepo.albumTracks(album.id)) {
+                                is com.howdy.echowave.core.common.AppResult.Ok ->
+                                    if (r.value.isNotEmpty()) controller.play(r.value, 0)
+                                else -> Unit
+                            }
+                        }
+                    },
+                    onPlayMood = { mood ->
+                        scope.launch {
+                            when (val r = repo.discoveryRepo.moodTracks(mood)) {
+                                is com.howdy.echowave.core.common.AppResult.Ok ->
+                                    if (r.value.isNotEmpty()) controller.play(r.value, 0)
+                                else -> Unit
+                            }
+                        }
+                    },
                 )
             }
             composable(Routes.SEARCH) {
                 SearchScreen(
+                    browseTracks = discoverUi.charts + history,
                     onPlay = { tracks, i ->
                         android.util.Log.d("EchoWavePlay", "tap trackId=${tracks.getOrNull(i)?.id} index=$i")
                         scope.launch { controller.play(tracks, i) }
@@ -120,6 +208,45 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                 LibraryScreen(onPlay = { tracks, i ->
                     scope.launch { controller.play(tracks, i) }
                 })
+            }
+            composable(Routes.CHARTS) {
+                ChartsScreen(
+                    tracks = discoverUi.charts,
+                    loading = discoverUi.loadingCharts,
+                    onPlay = { tracks, i ->
+                        scope.launch { controller.play(tracks, i) }
+                    },
+                )
+            }
+            composable(Routes.NEW_RELEASES) {
+                NewReleasesScreen(
+                    albums = discoverUi.albums,
+                    loading = discoverUi.loadingAlbums,
+                    onOpenAlbum = { album ->
+                        scope.launch {
+                            when (val r = repo.discoveryRepo.albumTracks(album.id)) {
+                                is com.howdy.echowave.core.common.AppResult.Ok ->
+                                    if (r.value.isNotEmpty()) controller.play(r.value, 0)
+                                else -> Unit
+                            }
+                        }
+                    },
+                )
+            }
+            composable(Routes.MOODS) {
+                MoodsScreen(
+                    moods = discoverUi.moods,
+                    loading = discoverUi.loadingMoods,
+                    onOpenMood = { mood ->
+                        scope.launch {
+                            when (val r = repo.discoveryRepo.moodTracks(mood)) {
+                                is com.howdy.echowave.core.common.AppResult.Ok ->
+                                    if (r.value.isNotEmpty()) controller.play(r.value, 0)
+                                else -> Unit
+                            }
+                        }
+                    },
+                )
             }
             composable(Routes.SETTINGS) { SettingsScreen() }
             composable(Routes.NOW_PLAYING) {
@@ -157,6 +284,7 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     },
                     lyrics = lyricsUi,
                     onRetryLyrics = { lyricsVm.load(current, forceRefresh = true) },
+                    onBack = { nav.popBackStack() },
                 )
             }
         }

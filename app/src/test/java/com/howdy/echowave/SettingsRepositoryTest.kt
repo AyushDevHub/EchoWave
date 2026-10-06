@@ -36,4 +36,18 @@ class SettingsRepositoryTest {
         repo.setAppearance(Appearance.LIGHT)
         assertEquals(Appearance.LIGHT, repo.appearance.first())
     }
+
+    @Test fun `persists theme greeting name and taste preferences`() = runBlocking {
+        val repository = repo()
+        assertEquals(ThemePreset.PURPLE, repository.themePreset.first())
+        assertEquals(true, repository.greetingEnabled.first())
+        repository.setThemePreset(ThemePreset.MIDNIGHT_AZURE)
+        repository.setDisplayName("  Asta  ")
+        repository.setGreetingEnabled(false)
+        repository.setMusicPreferences("Hindi, Bhojpuri, Indie")
+        assertEquals(ThemePreset.MIDNIGHT_AZURE, repository.themePreset.first())
+        assertEquals("Asta", repository.displayName.first())
+        assertEquals(false, repository.greetingEnabled.first())
+        assertEquals("Hindi, Bhojpuri, Indie", repository.musicPreferences.first())
+    }
 }

@@ -77,7 +77,7 @@ class WebViewPoTokenProvider(
                     val m = try {
                         minter ?: openMinter().also { minter = it }
                     } catch (e: Exception) {
-                        android.util.Log.e(TAG, "poToken minter open failed: ${e.javaClass.simpleName}: ${e.message}")
+                        android.util.Log.e(TAG, "poToken minter open failed: ${e.javaClass.simpleName}")
                         return@withTimeout null
                     }
                     // Streaming pot is session-bound and cached; the player pot
@@ -86,7 +86,7 @@ class WebViewPoTokenProvider(
                         val (fresh, expiresSec) = try {
                             m.mintStreamingPot(session)
                         } catch (e: Exception) {
-                            android.util.Log.e(TAG, "poToken streaming mint failed: ${e.javaClass.simpleName}: ${e.message}")
+                            android.util.Log.e(TAG, "poToken streaming mint failed: ${e.javaClass.simpleName}")
                             dropMinter()
                             return@withTimeout null
                         }
@@ -283,7 +283,7 @@ class BotGuardWebView private constructor(private val context: Context) : BotGua
             .build()
         http.newCall(req).execute().use { resp ->
             if (resp.code != 200) {
-                android.util.Log.e(TAG, "jnn HTTP ${resp.code} $url")
+                android.util.Log.e(TAG, "jnn HTTP ${resp.code}")
                 return null
             }
             return resp.body?.string()
@@ -325,7 +325,7 @@ class BotGuardWebView private constructor(private val context: Context) : BotGua
                         web.webChromeClient = object : WebChromeClient() {
                             override fun onConsoleMessage(m: ConsoleMessage): Boolean {
                                 if (m.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
-                                    android.util.Log.e(TAG, "JS: ${m.message()}")
+                                    android.util.Log.e(TAG, "BotGuard WebView JavaScript error")
                                 }
                                 return super.onConsoleMessage(m)
                             }

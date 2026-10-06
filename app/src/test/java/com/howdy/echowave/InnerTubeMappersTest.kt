@@ -136,6 +136,35 @@ class InnerTubeMappersTest {
         assertEquals("http://a", attachPoToken(noPot).url)
     }
 
+    @Test fun `two-row albums parse`() {        val root = json(
+            """{"contents":{"sectionListRenderer":{"contents":[
+              {"gridRenderer":{"items":[
+                {"musicTwoRowItemRenderer":{
+                  "title":{"runs":[{"text":"After Hours"}]},
+                  "subtitle":{"runs":[{"text":"Album"},{"text":" • "},{"text":"The Weeknd"},{"text":" • "},{"text":"2020"}]},
+                  "navigationEndpoint":{"browseEndpoint":{"browseId":"ALB123"}},
+                  "thumbnailRenderer":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"http://c=w60-h60"}]}}}
+                }}
+              ]}}
+            ]}}}""",
+        )
+        val albums = parseTwoRowAlbums(root)
+        assertEquals(1, albums.size)
+        assertEquals("ALB123", albums[0].id)
+        assertEquals("After Hours", albums[0].title)
+        assertEquals("The Weeknd", albums[0].artist)
+        assertEquals("http://c=w540-h540", albums[0].artworkUrl)
+    }
+
+    @Test fun `browse body carries id and visitor`() {
+        val body = browseBody("FEmusic_charts", "P", "VIS")
+        assertEquals("FEmusic_charts", body["browseId"]!!.jsonPrimitive.content)
+        assertEquals("P", body["params"]!!.jsonPrimitive.content)
+        val client = body["context"]!!.jsonObject["client"]!!.jsonObject
+        assertEquals("VIS", client["visitorData"]!!.jsonPrimitive.content)
+        assertEquals("WEB_REMIX", client["clientName"]!!.jsonPrimitive.content)
+    }
+
     @Test fun `video items flagged by kind and view counts`() {
         val root = json(
             """{"contents":{"sectionListRenderer":{"contents":[
@@ -166,15 +195,70 @@ class InnerTubeMappersTest {
         assertEquals(true, tracks[1].isVideo)
     }
 
-    @Test fun `sections split top songs videos`() {
-        val t = { id: String, video: Boolean ->
-            com.howdy.echowave.domain.model.Track(id, "t", "a", isVideo = video)
+    @Test fun `sections keep every result present`() {
+        val t = { id: String, video: Boolean, episode: Boolean ->
+            com.howdy.echowave.domain.model.Track(id, "t", "a", isVideo = video, isEpisode = episode)
         }
         val ui = com.howdy.echowave.ui.search.SearchUiState(
-            results = listOf(t("top", false), t("s1", false), t("v1", true)),
+            results = listOf(
+                t("top", false, false),
+                t("s1", false, false),
+                t("v1", true, false),
+                t("e1", false, true),
+            ),
         )
         assertEquals("top", ui.topResult?.id)
-        assertEquals(listOf("s1"), ui.songs.map { it.id })
+        assertEquals(listOf("top", "s1"), ui.songs.map { it.id })
         assertEquals(listOf("v1"), ui.videos.map { it.id })
+        assertEquals(listOf("e1"), ui.episodes.map { it.id })
+        assertEquals(true, ui.shows(com.howdy.echowave.ui.search.SearchSection.SONGS))
+    }
+
+    @Test fun `episode items flagged by kind or mention`() {
+        val root = json(
+            """{"contents":{"sectionListRenderer":{"contents":[
+              {"musicShelfRenderer":{"contents":[
+                {"musicResponsiveListItemRenderer":{
+                  "flexColumns":[
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Ep 12"}]}}},
+                    {"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Episode"},{"text":" • "},{"text":"My Podcast"}]}}}
+                  ],
+                  "playlistItemData":{"videoId":"ep1"},
+                  "thumbnail":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[{"url":"http://e"}]}}}
+                }}
+              ]}}
+            ]}}}""",
+        )
+        val tracks = parseSearchResponse(root)
+        assertEquals(1, tracks.size)
+        assertEquals(true, tracks[0].isEpisode)
+        assertEquals(false, tracks[0].isVideo)
+        assertEquals(null, tracks[0].album)
+    }
+
+    @Test fun `mood buttons parse with stripe and endpoint`() {
+        val root = json(
+            """{"contents":{"sectionListRenderer":{"contents":[
+              {"gridRenderer":{
+                "header":{"gridHeaderRenderer":{"title":{"runs":[{"text":"Moods"}]}}},
+                "items":[
+                  {"musicNavigationButtonRenderer":{
+                    "buttonText":{"runs":[{"text":"Chill"}]},
+                    "solid":{"leftStripeColor":4294967295},
+                    "clickCommand":{"browseEndpoint":{"browseId":"GENRE1","params":"P1"}}
+                  }},
+                  {"musicNavigationButtonRenderer":{
+                    "buttonText":{"runs":[{"text":"NoEndpoint"}]}
+                  }}
+                ]
+              }}
+            ]}}}""",
+        )
+        val moods = parseMoodGenres(root)
+        assertEquals(1, moods.size)
+        assertEquals("GENRE1", moods[0].id)
+        assertEquals("Chill", moods[0].title)
+        assertEquals(4294967295L, moods[0].color)
+        assertEquals("P1", moods[0].params)
     }
 }

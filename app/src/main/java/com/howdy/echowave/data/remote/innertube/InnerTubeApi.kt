@@ -31,6 +31,13 @@ const val ANDROID_VR_CLIENT_ID = "28"
 const val TV_CLIENT_VERSION = "7.20260213.00.00"
 const val TV_CLIENT_ID = "7"
 
+/** Anonymous browse bodies (charts, new releases). Donor browseIds, WEB_REMIX. */
+fun browseBody(browseId: String, params: String? = null, visitorData: String? = null): JsonObject = buildJsonObject {
+    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
+    put("browseId", browseId)
+    if (params != null) put("params", params)
+}
+
 val innerTubeJson = Json {
     ignoreUnknownKeys = true
     explicitNulls = false
@@ -50,6 +57,15 @@ interface InnerTubeApi {
 
     @POST("player")
     suspend fun player(
+        @Query("key") key: String? = INNERTUBE_API_KEY,
+        @Query("prettyPrint") prettyPrint: Boolean = false,
+        @Header("X-YouTube-Client-Name") clientId: String? = null,
+        @Header("X-YouTube-Client-Version") clientVersion: String? = null,
+        @Body body: JsonObject,
+    ): JsonObject
+
+    @POST("browse")
+    suspend fun browse(
         @Query("key") key: String? = INNERTUBE_API_KEY,
         @Query("prettyPrint") prettyPrint: Boolean = false,
         @Header("X-YouTube-Client-Name") clientId: String? = null,
@@ -113,8 +129,7 @@ private fun clientObj(
     if (visitorData != null) put("visitorData", visitorData)
 }
 
-fun searchBody(query: String, visitorData: String? = null): JsonObject = buildJsonObject {
-    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
+fun searchBody(query: String, visitorData: String? = null): JsonObject = buildJsonObject {    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
     put("query", query)
 }
 

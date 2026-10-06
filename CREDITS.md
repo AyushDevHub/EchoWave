@@ -30,7 +30,9 @@ EchoWave's own Kotlin files are not verbatim copies unless stated above. Files t
 
 The `innertubex` coordinate appears in the version catalog as a reference, but its dependency was reverted and is commented out in `app/build.gradle.kts`. It is not packaged in EchoWave. No `innertubex` source code has been copied into this project.
 
-Other application dependencies are declared in `gradle/libs.versions.toml` and `app/build.gradle.kts`; their notices and licenses remain with their respective projects and artifacts.
+Direct runtime dependencies declared in `app/build.gradle.kts` include AndroidX Core, Activity, Lifecycle, Compose Material/UI, Navigation, Room, DataStore, Media3, Coil, Retrofit, OkHttp, Kotlinx Serialization, and Kotlin Coroutines. KSP and the Room compiler are build-time dependencies. JUnit, AndroidX Test, Espresso, and Compose UI Test are test dependencies. Exact declared versions are in `gradle/libs.versions.toml`; transitive dependencies are resolved by Gradle and can change with dependency updates. These dependencies are distributed under their respective licenses. This is a direct-dependency summary, not a complete generated transitive SBOM or license report; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The app's YouTube/YouTube Music InnerTube integration is unofficial and is not an endorsement or statement of authorization. YouTube's [Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented API use without express permission and prohibit background audio playback for API Clients. EchoWave's current integration and background playback create an unresolved policy issue documented in [docs/INNER_TUBE_NOTES.md](docs/INNER_TUBE_NOTES.md). This note is included so source users can evaluate the issue; it does not establish legal applicability or permission.
 
 ## Trademarks and service names
 

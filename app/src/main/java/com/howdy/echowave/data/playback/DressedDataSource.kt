@@ -7,6 +7,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.common.util.UnstableApi
 import com.howdy.echowave.data.remote.innertube.PlayerClient
 
 /**
@@ -15,6 +16,7 @@ import com.howdy.echowave.data.remote.innertube.PlayerClient
  * the fetch must wear the minting client's identity) and logs ONLY safe
  * metadata — never URL values, tokens, or cookies.
  */
+@UnstableApi
 class DressedDataSource(
     private val delegate: DefaultHttpDataSource,
 ) : DataSource {

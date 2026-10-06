@@ -3,16 +3,27 @@ package com.howdy.echowave.ui.player
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -25,10 +36,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -56,10 +70,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
@@ -90,61 +113,56 @@ fun MiniPlayer(
     val progress = if (state.durationMs > 0) {
         (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
     } else 0f
-    val miniTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-    val miniProgressColor = MaterialTheme.colorScheme.primary
-
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
     ) {
-        Column {
-            Row(
-                Modifier.fillMaxWidth().padding(start = 8.dp, end = 2.dp, top = 6.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onOpen)
+                .padding(start = 10.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val progressColor = MaterialTheme.colorScheme.primary
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 TrackArtwork(
                     url = track.artworkUrl,
                     description = "Artwork for ${track.title}",
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-                        .clickable(onClick = onOpen),
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)),
                 )
-                Column(
-                    Modifier.weight(1f).clickable(onClick = onOpen).padding(horizontal = 10.dp),
-                ) {
-                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium)
-                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous track", modifier = Modifier.size(22.dp))
-                }
-                IconButton(onClick = onToggle, modifier = Modifier.size(42.dp)) {
-                    Icon(
-                        if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (state.isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(26.dp),
+                Canvas(Modifier.fillMaxSize()) {
+                    val stroke = 2.dp.toPx()
+                    drawArc(
+                        color = Color.White.copy(alpha = 0.22f), startAngle = -90f,
+                        sweepAngle = 360f, useCenter = false,
+                        topLeft = Offset(stroke / 2, stroke / 2),
+                        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
+                        style = Stroke(width = stroke),
+                    )
+                    drawArc(
+                        color = progressColor, startAngle = -90f,
+                        sweepAngle = 360f * progress, useCenter = false,
+                        topLeft = Offset(stroke / 2, stroke / 2),
+                        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
+                        style = Stroke(width = stroke, cap = StrokeCap.Round),
                     )
                 }
-                IconButton(onClick = onNext, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "Next track", modifier = Modifier.size(22.dp))
-                }
             }
-            Canvas(Modifier.fillMaxWidth().height(2.dp)) {
-                drawLine(
-                    color = miniTrackColor,
-                    start = Offset.Zero,
-                    end = Offset(size.width, 0f),
-                    strokeWidth = size.height,
-                )
-                drawLine(
-                    color = miniProgressColor,
-                    start = Offset.Zero,
-                    end = Offset(size.width * progress, 0f),
-                    strokeWidth = size.height,
-                )
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onToggle, modifier = Modifier.size(44.dp)) {
+                Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (state.isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(26.dp))
+            }
+            IconButton(onClick = onNext, modifier = Modifier.size(44.dp)) {
+                Icon(Icons.Default.SkipNext, contentDescription = "Next track",
+                    tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(28.dp))
             }
         }
     }
@@ -169,16 +187,42 @@ fun NowPlayingScreen(
     onAddToPlaylist: (Long) -> Unit = {},
     lyrics: LyricsUiState = LyricsUiState(),
     onRetryLyrics: () -> Unit = {},
+    onBack: () -> Unit = {},
 ) {
     var queueOpen by remember { mutableStateOf(false) }
     var lyricsOpen by remember { mutableStateOf(false) }
     var addOpen by remember { mutableStateOf(false) }
     val track = state.currentTrack
-    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+    Box(Modifier.fillMaxSize()) {
+        if (track != null) {
+            val ambientBlur by animateDpAsState(
+                targetValue = if (state.isPlaying) 48.dp else 34.dp,
+                animationSpec = tween(700),
+                label = "ambientArtworkBlur",
+            )
+            AsyncImage(
+                model = track.artworkUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(ambientBlur),
+            )
+            Box(Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.Black.copy(alpha = if (state.isPlaying) 0.40f else 0.56f),
+                        Color(0xFF09090D).copy(alpha = 0.86f),
+                    ),
+                ),
+            ))
+        }
+        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(
-            Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back to EchoWave")
+            }
             Column(Modifier.weight(1f)) {
                 Text("NOW PLAYING", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -189,9 +233,6 @@ fun NowPlayingScreen(
             TextButton(onClick = { queueOpen = true }) {
                 Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Queue", modifier = Modifier.padding(start = 6.dp))
-            }
-            TextButton(onClick = { lyricsOpen = true }) {
-                Text("Lyrics")
             }
         }
         if (track == null) {
@@ -213,7 +254,11 @@ fun NowPlayingScreen(
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 onAddToPlaylist = { addOpen = true },
+                lyrics = lyrics,
+                onOpenLyrics = { lyricsOpen = true },
+                onRetryLyrics = onRetryLyrics,
             )
+        }
         }
     }
 
@@ -227,19 +272,14 @@ fun NowPlayingScreen(
         )
     }
 
-    if (lyricsOpen) {
-        ModalBottomSheet(
-            onDismissRequest = { lyricsOpen = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            LyricsSheet(
-                title = track?.title,
-                state = lyrics,
-                positionMs = state.positionMs,
-                onRetry = onRetryLyrics,
-            )
-        }
+    if (lyricsOpen && track != null) {
+        FullscreenLyrics(
+            track = track,
+            state = lyrics,
+            positionMs = state.positionMs,
+            onBack = { lyricsOpen = false },
+            onRetry = onRetryLyrics,
+        )
     }
 
     if (queueOpen) {
@@ -287,6 +327,9 @@ private fun PlayerPage(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: () -> Unit = {},
+    lyrics: LyricsUiState,
+    onOpenLyrics: () -> Unit,
+    onRetryLyrics: () -> Unit,
 ) {
     val track = state.currentTrack ?: return
     Column(
@@ -310,10 +353,21 @@ private fun PlayerPage(
         }
 
         var dragDistance by remember(track.id) { mutableStateOf(0f) }
-        TrackArtwork(
-            url = track.artworkUrl,
-            description = "Album artwork for ${track.title}. Swipe to change tracks.",
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(28.dp))
+        val coverOffset by animateFloatAsState(
+            targetValue = dragDistance,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "coverSwipeReturn",
+        )
+        AnimatedContent(
+            targetState = track,
+            transitionSpec = { fadeIn(tween(320)) togetherWith fadeOut(tween(220)) },
+            label = "albumCoverTransition",
+            modifier = Modifier.fillMaxWidth(0.84f).aspectRatio(1f)
+                .shadow(24.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
+                .graphicsLayer {
+                    translationX = coverOffset.coerceIn(-size.width * 0.12f, size.width * 0.12f)
+                    rotationZ = (coverOffset / 35f).coerceIn(-5f, 5f)
+                }
                 .pointerInput(track.id) {
                     detectHorizontalDragGestures(
                         onHorizontalDrag = { change, amount ->
@@ -330,8 +384,14 @@ private fun PlayerPage(
                         onDragCancel = { dragDistance = 0f },
                     )
                 },
-            contentScale = ContentScale.Crop,
-        )
+        ) { coverTrack ->
+            TrackArtwork(
+                url = coverTrack.artworkUrl,
+                description = "Album artwork for ${coverTrack.title}. Swipe to change tracks.",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
         Text("SWIPE COVER TO CHANGE TRACK", style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
@@ -354,15 +414,16 @@ private fun PlayerPage(
             }
         }
 
-        val progress = if (state.durationMs > 0) {
-            (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
-        } else 0f
-        WavyStrip(seed = track.id, progress = progress, playing = state.isPlaying)
-        Slider(
-            value = state.positionMs.toFloat().coerceIn(0f, state.durationMs.takeIf { it > 0 }?.toFloat() ?: 1f),
-            onValueChange = { onSeek(it.toLong()) },
-            valueRange = 0f..(state.durationMs.takeIf { it > 0 } ?: 1).toFloat(),
-            modifier = Modifier.fillMaxWidth().height(34.dp),
+        LyricsPreview(
+            state = lyrics,
+            positionMs = state.positionMs,
+            onOpen = onOpenLyrics,
+            onRetry = onRetryLyrics,
+        )
+        PlaybackScrubber(
+            positionMs = state.positionMs,
+            durationMs = state.durationMs,
+            onSeek = onSeek,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(formatDuration(state.positionMs), style = MaterialTheme.typography.labelSmall,
@@ -372,38 +433,236 @@ private fun PlayerPage(
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(top = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth().padding(top = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = { onShuffle(!state.shuffleEnabled) }) {
+            IconButton(onClick = { onShuffle(!state.shuffleEnabled) }, modifier = Modifier.size(46.dp)) {
                 Icon(Icons.Default.Shuffle, "Shuffle",
                     tint = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = onPrev, modifier = Modifier.size(54.dp)) {
-                Icon(Icons.Default.SkipPrevious, "Previous track", modifier = Modifier.size(32.dp))
-            }
-            Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(68.dp).clickable(onClick = onToggle)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (state.isPlaying) "Pause" else "Play",
-                        tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(36.dp))
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconButton(onClick = onPrev, modifier = Modifier.size(50.dp)) {
+                    Icon(Icons.Default.SkipPrevious, "Previous track", modifier = Modifier.size(30.dp))
+                }
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(70.dp).clickable(onClick = onToggle)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (state.isPlaying) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(34.dp))
+                    }
+                }
+                IconButton(onClick = onNext, modifier = Modifier.size(50.dp)) {
+                    Icon(Icons.Default.SkipNext, "Next track", modifier = Modifier.size(30.dp))
                 }
             }
-            IconButton(onClick = onNext, modifier = Modifier.size(54.dp)) {
-                Icon(Icons.Default.SkipNext, "Next track", modifier = Modifier.size(32.dp))
-            }
+            Spacer(Modifier.weight(1f))
             IconButton(onClick = {
                 onRepeat(when (state.repeatMode) {
                     RepeatMode.OFF -> RepeatMode.ALL
                     RepeatMode.ALL -> RepeatMode.ONE
                     RepeatMode.ONE -> RepeatMode.OFF
                 })
-            }) {
+            }, modifier = Modifier.size(46.dp)) {
                 Icon(if (state.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
                     "Repeat", tint = if (state.repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaybackScrubber(
+    positionMs: Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit,
+) {
+    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    val activeColor = MaterialTheme.colorScheme.primary
+    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+    Canvas(
+        Modifier.fillMaxWidth().height(30.dp)
+            .pointerInput(durationMs) {
+                detectTapGestures { tap ->
+                    if (durationMs > 0 && size.width > 0) {
+                        onSeek((tap.x / size.width * durationMs).toLong().coerceIn(0L, durationMs))
+                    }
+                }
+            }
+            .pointerInput(durationMs) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        if (durationMs > 0 && size.width > 0) {
+                            onSeek((change.position.x / size.width * durationMs).toLong().coerceIn(0L, durationMs))
+                        }
+                    },
+                )
+            }
+            .semantics {
+                contentDescription = "Playback progress"
+                progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
+            },
+    ) {
+        val y = size.height / 2f
+        val thumbX = size.width * progress
+        val stroke = 3.dp.toPx()
+        drawLine(inactiveColor, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke, cap = StrokeCap.Round)
+        if (thumbX > 0f) drawLine(activeColor, Offset(0f, y), Offset(thumbX, y), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawCircle(activeColor, radius = 6.dp.toPx(), center = Offset(thumbX, y))
+    }
+}
+
+@Composable
+private fun LyricsPreview(
+    state: LyricsUiState,
+    positionMs: Long,
+    onOpen: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val lines = state.lines
+    val activeIndex = lines?.let {
+        com.howdy.echowave.data.remote.lyrics.currentLrcIndex(it, positionMs)
+    } ?: -1
+    val previewIndex = when {
+        lines.isNullOrEmpty() -> -1
+        activeIndex >= 0 -> activeIndex
+        else -> 0
+    }
+    Column(
+        Modifier.fillMaxWidth().height(108.dp).clickable(onClick = onOpen)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        when {
+            state.loading -> Text("Finding lyrics…", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium)
+            lines.isNullOrEmpty() -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(state.error ?: "Lyrics unavailable", Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = onRetry) { Text("Retry") }
+            }
+            else -> (-1..1).forEach { offset ->
+                val line = lines.getOrNull(previewIndex + offset)
+                if (line != null) {
+                    Text(
+                        line.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = if (offset == 0) MaterialTheme.typography.titleMedium
+                        else MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = if (offset == 0) 1f else 0.38f,
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenLyrics(
+    track: com.howdy.echowave.domain.model.Track,
+    state: LyricsUiState,
+    positionMs: Long,
+    onBack: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val lines = state.lines
+    val activeIndex = lines?.let {
+        com.howdy.echowave.data.remote.lyrics.currentLrcIndex(it, positionMs)
+    } ?: -1
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(activeIndex) {
+        if (activeIndex >= 0) runCatching { listState.animateScrollToItem(activeIndex) }
+    }
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = track.artworkUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().blur(42.dp),
+        )
+        Box(Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.52f), Color(0xFF130B1B).copy(alpha = 0.94f))),
+        ))
+        Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back to player")
+                }
+                TrackArtwork(track.artworkUrl, "Artwork for ${track.title}",
+                    Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)))
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium)
+                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.Close, contentDescription = "Close lyrics")
+                }
+            }
+            when {
+                state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Finding lyrics…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                lines.isNullOrEmpty() -> Column(
+                    Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(state.error ?: "No lyrics found for this track.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = onRetry) { Text("Try again") }
+                }
+                else -> LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 64.dp, bottom = 120.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp),
+                ) {
+                    itemsIndexed(lines) { index, line ->
+                        val active = index == activeIndex || activeIndex < 0 && index == 0
+                        val activeWord = if (active) com.howdy.echowave.data.remote.lyrics
+                            .currentLrcWordIndex(line.words, positionMs) else -1
+                        val wordScales = line.words.mapIndexed { wordIndex, _ ->
+                            animateFloatAsState(
+                                targetValue = if (active && wordIndex == activeWord) 1.12f else 1f,
+                                animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                                label = "fullscreenLyricWord",
+                            ).value
+                        }
+                        val content = buildAnnotatedString {
+                            if (line.words.isEmpty()) {
+                                append(line.text)
+                            } else {
+                                line.words.forEachIndexed { wordIndex, word ->
+                                    withStyle(SpanStyle(
+                                        color = if (wordIndex == activeWord && active) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = if (active) 0.84f else 0.34f),
+                                        fontWeight = if (wordIndex == activeWord && active) FontWeight.Bold else FontWeight.SemiBold,
+                                        fontSize = wordScales[wordIndex].em,
+                                    )) { append(word.text) }
+                                }
+                            }
+                        }
+                        Text(
+                            content,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (active) 1f else 0.34f),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }

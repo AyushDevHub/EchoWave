@@ -115,9 +115,9 @@ class InnerTubeStreamResolver(
                     Result.failure(Exception(p.reason))
                 }
             }
-        } catch (e: Exception) {
-            android.util.Log.e("EchoWaveResolve", "innerTube ${attempt.label} network fail trackId=$trackId", e)
-            Result.failure(Exception(EchoWaveError.Network(e.message ?: "resolve failed").userMessage()))
+        } catch (_: Exception) {
+            android.util.Log.e("EchoWaveResolve", "innerTube ${attempt.label} network fail")
+            Result.failure(Exception(EchoWaveError.Network("resolve failed").userMessage()))
         }
     }
 
