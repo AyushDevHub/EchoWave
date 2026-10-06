@@ -1,17 +1,35 @@
-# AGENTS
+# Repository agent instructions
 
-Build agent for EchoWave (GPL-3.0, steady-clean).
+These instructions apply to automated coding agents and maintainers working in EchoWave. The project is GPL-3.0 licensed; see `LICENSE` and `CREDITS.md`.
 
-Commands:
-- `./gradlew assembleDebug`
-- `./gradlew test`
-- `./gradlew lint`
+## Build and validation
 
-Scope rules:
-- P0 before P1 before P2. Never cut playback reliability for features.
-- UI observes `playback/PlaybackController.kt:1` state. No direct ExoPlayer in UI.
-- New source? Implement `domain/source/MusicSource.kt`, bind in `AppContainer.kt`.
-- New resolver? Implement `domain/source/StreamResolver.kt`, append to chain in `AppContainer.kt`.
-- No AI calls from playback/data. AI only in `features/ai/`.
-- Every user flow needs loading/empty/error states.
-- Attribution required: update CREDITS.md when porting donor code.
+Run commands from the repository root.
+
+```powershell
+.\gradlew.bat assembleDebug
+.\gradlew.bat test
+.\gradlew.bat lint
+```
+
+On macOS/Linux, use the equivalent wrapper:
+
+```sh
+./gradlew assembleDebug
+./gradlew test
+./gradlew lint
+```
+
+Do not claim a test, device scenario, security scan, or release check passed unless it was run. Review warnings instead of suppressing them without explanation.
+
+## Engineering constraints
+
+- Prioritize P0 playback reliability over P1 and P2 features. See `ARCHITECTURE.md`.
+- UI observes `PlaybackController` state. UI code must not access ExoPlayer directly.
+- Implement sources through `domain/source/MusicSource.kt` and resolvers through `domain/source/StreamResolver.kt`; bind them in `AppContainer.kt`.
+- Keep AI integrations inside `features/ai/`; no AI calls from playback or data layers.
+- Every new user flow needs loading, empty, and error states.
+- Preserve privacy: do not log or commit credentials, cookies, PO tokens, signed URLs, request headers, or personal data.
+- Review provider terms before adding or changing a source. Do not evade provider restrictions or represent undocumented access as authorized.
+- Update attribution in `CREDITS.md` and `THIRD_PARTY_NOTICES.md` when porting code or adding dependencies/assets.
+- Update user and developer documentation when behavior, setup, privacy, or release procedures change.

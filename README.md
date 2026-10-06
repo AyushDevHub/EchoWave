@@ -1,81 +1,94 @@
 # EchoWave
 
-EchoWave is an open source Android music player built with Kotlin, Jetpack Compose, and Media3. It combines search, local playlists and favorites, listening history, lyrics, and background playback controls.
+[![Android CI](https://github.com/AyushDevHub/EchoWave/actions/workflows/android.yml/badge.svg)](https://github.com/AyushDevHub/EchoWave/actions/workflows/android.yml)
+[![Latest release](https://img.shields.io/github/v/release/AyushDevHub/EchoWave)](https://github.com/AyushDevHub/EchoWave/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-The interface includes multiple color themes, personalized discovery, recent searches, animated word-synced lyrics, and a compact player. Preferences and library data are stored locally.
+EchoWave is an Android music player built with Kotlin, Jetpack Compose, and AndroidX Media3. It includes search and discovery, local playlists and favorites, listening history, lyrics, background playback controls, personal themes, and a compact player.
 
-> GPL-3.0 licensed. See [LICENSE](LICENSE), [NOTICE](NOTICE), and [CREDITS.md](CREDITS.md).
+## Download
 
-## Important source and distribution notice
+The current public APK is on the [GitHub Releases page](https://github.com/AyushDevHub/EchoWave/releases/latest). Release notes include installation information and a SHA-256 checksum. EchoWave requires Android 8.0 (API 26) or newer.
 
-Current discovery and playback use unofficial YouTube/YouTube Music InnerTube endpoints. This is not a supported public music API. YouTube's [Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented API use without express permission and prohibit background audio playback for API Clients. EchoWave's current background player and InnerTube integration therefore have unresolved provider-policy concerns. Review [docs/INNER_TUBE_NOTES.md](docs/INNER_TUBE_NOTES.md) and [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) before distributing or using provider-backed features. This repository does not claim that the integration is authorized.
+## Important provider and distribution notice
 
-Provider availability, terms, and content rights are separate from EchoWave. The app does not host music. Users must ensure their use complies with applicable terms and law.
+EchoWave currently uses unofficial YouTube/YouTube Music InnerTube endpoints for search, discovery, metadata, and stream resolution. These are undocumented interfaces and may stop working without notice. EchoWave is not an official YouTube client and is not affiliated with or endorsed by Google or YouTube.
+
+YouTube's [Terms of Service](https://www.youtube.com/t/terms) restrict automated access without prior written permission or another applicable basis. Its [API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented API use without express permission and prohibit background playback in API Clients. How those terms apply to this particular integration is a legal question; EchoWave has no documented authorization. A disclaimer, open-source license, or another app using similar methods does not grant permission. See [provider integration notes](docs/INNER_TUBE_NOTES.md) and the [project risk register](docs/RISK_REGISTER.md).
+
+The app does not host music. Users are responsible for their own use of the app and third-party services. Track artwork, metadata, lyrics, and streams are provided by independent services and rights holders.
 
 ## Features
 
-| Area | Included |
+| Area | Features |
 | --- | --- |
-| Search and discovery | Search, browse collections, moods and genres, and recent searches |
-| Playback | Queue, seek, previous and next, shuffle, repeat, and automatic advance |
-| Lyrics | Lyrics lookup and word-timed lyric presentation when timestamps are available |
+| Discovery | Search, browse collections, moods and genres, recent searches, taste-led suggestions |
+| Playback | Queue, seek, previous/next, shuffle, repeat, and automatic advance |
+| Lyrics | Lyrics lookup and animated word-timed display when timing data is available |
 | Library | Local favorites, playlists, and listening history |
-| Personalization | Optional name greeting, taste preferences, and selectable themes |
-| System controls | Media session, notification, and lock-screen playback controls |
+| Personalization | Optional name greeting and selectable color themes |
+| Android integration | Media session, notification, lock-screen, and background playback controls |
 
-Music source and fallback behavior can change independently of EchoWave; some fallback resolvers are currently scaffolding.
+Provider behavior can change independently of EchoWave. Some fallback resolvers are placeholders and should not be presented as working providers.
 
-## Build
+## Build from source
 
-Requirements: Android Studio with the project-compatible Android SDK and JDK.
+Requirements: Android Studio, Android SDK Platform 37, and JDK 17. Open the project in Android Studio or use the Gradle wrapper from the repository root.
 
-```sh
-./gradlew assembleDebug
-./gradlew test
-./gradlew lint
+```powershell
+.\gradlew.bat assembleDebug
+.\gradlew.bat test
+.\gradlew.bat lint
 ```
 
 Install a debug build on a connected device:
 
-```sh
-./gradlew installDebug
+```powershell
+.\gradlew.bat installDebug
 ```
 
-## Build a locally signed release APK
+See [developer setup](docs/SETUP.md) for details.
 
-Release signing keys must stay private and must be backed up securely. Gradle reads an optional properties file at `~/.android/echowave-release.properties` (Windows: `%USERPROFILE%\.android\echowave-release.properties`). Example:
+## Release signing
 
-```properties
-storeFile=/absolute/path/to/echowave-release.jks
-storePassword=YOUR_PRIVATE_STORE_PASSWORD
-keyAlias=echowave
-keyPassword=YOUR_PRIVATE_KEY_PASSWORD
+Release signing keys are private and must never be committed. For a local release build, Gradle reads `~/.android/echowave-release.properties` (Windows: `%USERPROFILE%\.android\echowave-release.properties`). Keep the properties file and referenced keystore private, and maintain a secure backup. Losing the key prevents signing future updates with the same identity.
+
+```powershell
+.\gradlew.bat assembleRelease bundleRelease
 ```
 
-Keep both the keystore and this properties file out of Git. Losing the keystore prevents signing future updates with the same identity. With this file present, run:
-
-```sh
-./gradlew assembleRelease bundleRelease
-```
-
-The APK is written to `app/build/outputs/apk/release/app-release.apk`; the Play bundle is at `app/build/outputs/bundle/release/app-release.aab`. Without the private signing file Gradle produces unsigned release artifacts that are not ready for distribution. A signed build is not, by itself, a provider, privacy, store, or legal approval; see [the release audit](docs/SECURITY_AUDIT.md).
+The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. The public v1.0.0 APK is a signed release artifact; it has not been fully regression-tested on a clean physical device. A successful build does not establish provider authorization, privacy compliance, or store approval.
 
 ## Project structure
 
 ```text
-domain/       playback models, repository contracts, and source interfaces
-data/         local storage, provider clients, stream resolution, playback data sources
-playback/     Media3 service, session connection, and queue command routing
-features/     user-facing features, including the isolated AI feature boundary
-ui/           Compose screens and reusable components
+app/src/main/java/com/howdy/echowave/
+  domain/       models, repository contracts, sources, and use cases
+  data/         local persistence, provider clients, and stream resolution
+  playback/     Media3 service, session, controller, and queue routing
+  features/     optional feature boundaries, including AI extension interface
+  ui/           Compose screens, navigation, and theme
 ```
 
-The UI observes `PlaybackController.state`; it does not access ExoPlayer directly. Music sources implement `MusicSource`, stream providers implement `StreamResolver`, and `AppContainer` binds them. See [ARCHITECTURE.md](ARCHITECTURE.md).
+The UI observes `PlaybackController` state and does not access ExoPlayer directly. `AppContainer` wires repositories, music sources, resolvers, and playback.
 
-## Attribution and licenses
+## Project documentation
 
-See [CREDITS.md](CREDITS.md) for donor code, reference-only projects, and direct dependencies. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records the current inventory limits. GPL-3.0 source license: [LICENSE](LICENSE).
+- [Documentation index](docs/INDEX.md)
+- [Architecture](ARCHITECTURE.md)
+- [Release process and post-release checklist](docs/RELEASE_PROCESS.md)
+- [Risk register](docs/RISK_REGISTER.md)
+- [Privacy and data inventory](docs/PRIVACY.md)
+- [Security policy](SECURITY.md)
+- [Security and release review](docs/SECURITY_AUDIT.md)
+- [Provider integration notes](docs/INNER_TUBE_NOTES.md)
+- [Credits and dependency notices](CREDITS.md), [third-party notices](THIRD_PARTY_NOTICES.md)
+- [Changelog](docs/CHANGELOG.md)
 
-## Project status
+## Project policies
 
-The repo includes [setup notes](docs/SETUP.md), [test plan](docs/TEST_PLAN.md), [privacy implementation notes](docs/PRIVACY.md), and [security/release audit](docs/SECURITY_AUDIT.md). These are engineering records, not a published privacy policy or a complete security, legal, or release certification.
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md), [contributor guide](CONTRIBUTING.md), [support guide](SUPPORT.md), and issue/PR templates before interacting with the repository. These files describe project expectations; they do not constitute provider authorization or alter third-party service terms.
+
+## License
+
+EchoWave is licensed under the [GNU General Public License v3.0](LICENSE). Donor code, dependency, and asset notes are in [CREDITS.md](CREDITS.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The app is provided without warranty; see the license for details.

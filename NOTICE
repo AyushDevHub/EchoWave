@@ -1,5 +1,15 @@
-EchoWave (c) 2026 the EchoWave contributors.
-Licensed under GPL-3.0 (see LICENSE).
+EchoWave
+Copyright (c) 2026 EchoWave contributors
 
-Includes po_token.html vendored from EchoMusicApp/Echo-Music (GPL-3.0).
-See CREDITS.md for full third-party attributions.
+This project is licensed under the GNU General Public License, version 3.
+See LICENSE for the full license text.
+
+Third-party material:
+- app/src/main/assets/po_token.html is vendored from Echo-Music
+  (https://github.com/EchoMusicApp/Echo-Music), licensed under GPL-3.0.
+  The asset's retained attribution header and CREDITS.md identify this source.
+- Additional adapted code, reference-only projects, dependencies, and service
+  integrations are documented in CREDITS.md and THIRD_PARTY_NOTICES.md.
+
+EchoWave is an independent project and is not affiliated with or endorsed by
+YouTube, Google, Spotify, Apple, or any other service named in the source.

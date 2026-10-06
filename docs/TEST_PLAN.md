@@ -1,42 +1,49 @@
-# EchoWave release test plan
+# Test Plan
+
+This plan separates automated checks from device verification. A green build does not establish provider permission, content rights, app-store compliance, or complete playback reliability.
 
 ## Automated checks
 
-Run from the repository root:
+Run from the repository root on Windows:
 
 ```powershell
-.\gradlew.bat test
-.\gradlew.bat lint
-.\gradlew.bat assembleDebug
-.\gradlew.bat assembleRelease
-.\gradlew.bat bundleRelease
+.\gradlew.bat test lint assembleDebug
 ```
 
-The unit suite covers stream pipeline/range handling, playback routing, search, settings, lyrics, library, and utilities. Lint passes with warnings that need review. A successful debug build does not validate release signing, R8 behavior, or store compliance.
+For a release candidate, also run:
 
-## Physical-device release regression
+```powershell
+.\gradlew.bat assembleRelease bundleRelease
+```
 
-Use a clean install and a supported Android device. Record device model, Android version, build hash, and test result for each item.
+The v1.0.0 build was produced with release signing configured locally. The unit suite reported 72 tests with no failures/errors. Lint completed without errors and reported 49 warnings and 1 hint; those findings still need review. The signed APK and AAB signatures were verified. These checks did not exercise playback on a clean device.
 
-| Scenario | Expected result | Status |
-| --- | --- | --- |
-| Search: empty, no results, provider error, retry | Clear empty/error/loading states; retry recovers | Not run in this audit |
-| Playback: play, pause, next, previous, queue end | UI, notification, and lock-screen state stay synchronized | Not run |
-| Seek/range: repeated forward/backward seeks, including near start/end | No recurring 403/range failure; timeline remains accurate | Not run |
-| Network: offline, timeout, 403, 404, 500, expired media URL | Bounded retries and user-readable failure/recovery | Not run |
-| Background/lifecycle: home, lock, task removal, relaunch | Audio and session controls behave as specified | Not run |
-| Bluetooth/headset/media buttons | Controls route to the active queue | Not run |
-| Fast repeated track taps | No stale resolver result replaces the latest selection | Not run |
-| Library/settings persistence | Favorites, playlists, history, display name, palette survive process restart | Not run |
-| Accessibility/display scaling | TalkBack labels, large font, small/large displays remain usable | Not run |
-| Clean install and upgrade | First-run and migration/data retention are correct | Not run |
-| Release R8 build | Player, stream resolution, lyrics, and persistence survive shrinking | Not run |
+## Device regression matrix
 
-## Evidence collected in this workspace
+Run on at least one clean physical device using the signed release APK. Record device, Android version, APK SHA-256, date, and outcome. Do not write private user data into the report.
 
-- Debug APK assembled successfully during this review.
-- Unit tests pass, including the new settings persistence coverage.
-- The latest local report contains 72 unit tests with no failures or errors.
-- Release APK and bundle tasks pass with R8 enabled, but outputs are unsigned because release signing is not configured.
-- Debug build installed and launched on a connected device for visual UI smoke checks; stream playback and transport regressions were not run.
-- Physical-device availability was detected, but no full release regression was executed.
+| Area | Scenario | Expected outcome | v1.0.0 status |
+| --- | --- | --- | --- |
+| Install/upgrade | Clean install, open, upgrade over previous signed build | Launches; data migration and signing identity behave as intended | Not verified |
+| Search | Empty input, no result, provider error, retry | Clear validation, empty/error states, recoverable retry | Not verified |
+| Playback | Play, pause, next, previous, end of queue | UI, queue, notification, and lock-screen controls remain consistent | Not verified |
+| Seeking | Repeated forward/back seek, including near start/end | Position remains accurate; no repeatable range/403 failure | Not verified |
+| Network recovery | Offline, timeout, 403, 404, 500, expired URL | Bounded retries and understandable failure state | Not verified |
+| Lifecycle | Background, lock, return to app, task removal, process recreation | Expected session and service behavior; no stale playback state | Not verified |
+| Hardware controls | Headset, Bluetooth, notification, lock screen | Commands reach the current queue correctly | Not verified |
+| Rapid selection | Tap several tracks quickly | Latest selection wins; no stale resolver result replaces it | Not verified |
+| Library/settings | Favorites, playlists, history, name, palette, recent search | State persists and clear/remove actions work | Not verified |
+| UI/accessibility | TalkBack, large font, smaller display, rotation if supported | Controls remain discoverable and layout usable | Not verified |
+| R8/release | Exercise playback, lyrics, persistence in minified signed build | No missing-code or serialization failures | Not verified |
+
+## Evidence recorded for v1.0.0
+
+- `test lint assembleRelease bundleRelease` succeeded in the local development environment.
+- `apksigner` verified the release APK; `jarsigner` verified the release AAB.
+- A debug build was installed/launched for a visual UI smoke check. Full stream playback and the device regression matrix above were not run.
+- The GitHub `Publish EchoWave APK` workflow completed successfully and published the APK/checksum assets for tag `v1.0.0`.
+- Lint warnings, provider-term questions, privacy/backup decisions, complete dependency inventory, and device playback checks remain follow-up work.
+
+## Release evidence to retain
+
+Keep the source commit and tag, test/lint reports, signed artifact checksums, signer certificate fingerprint, device test record, dependency/SBOM report, and release notes together. Never store the private signing key or its password in the repository or CI logs.

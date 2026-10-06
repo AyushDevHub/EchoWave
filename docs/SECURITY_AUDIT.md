@@ -1,55 +1,43 @@
-# EchoWave pre-release security and release audit
+# EchoWave v1.0.0 Security and Release Review
 
 **Review date:** 2026-10-07
-**Reviewed artifact:** signed local release APK and AAB; working tree at review time
-**Release status:** **Published at the project owner's direction; provider-policy risk remains unresolved.** This is an engineering review, not a store or legal approval.
+**Artifact:** signed APK and AAB built locally for tag `v1.0.0`
+**Publication:** GitHub Release `v1.0.0` published; APK and SHA-256 asset confirmed through GitHub's release API.
+**Scope:** source/configuration review and recorded build evidence. This is not a penetration test, legal opinion, privacy certification, or app-store approval.
 
-## Findings that block public release
+## Open risks
 
-| Severity | Finding | Required before release |
+| Priority | Finding | Follow-up |
 | --- | --- | --- |
-| Critical | The published app uses undocumented YouTube/YouTube Music InnerTube endpoints and supports background playback. YouTube's [Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented APIs without express permission and prohibit background audio playback for API Clients (sections III.E.4 and III.E.6). | This release was published at the project owner's direction. Resolve provider-policy applicability/permission or replace the integration before further distribution. See [InnerTube notes](INNER_TUBE_NOTES.md). |
-| Critical | Music, artwork, lyrics, and provider terms/rights have not been independently cleared for redistribution or public release. | Confirm rights and applicable service terms for every source and asset. |
-| High | The latest lint pass has no errors, with 49 warnings and 1 hint remaining. Most warnings concern available dependency updates and deprecations; they still need a reviewed disposition. | Review warnings and current dependency advisories before release; don't use a baseline to conceal findings. |
-| High | No dependency vulnerability/SBOM/license scan is configured. | Run a current advisory scan and generate a complete transitive dependency/license inventory. |
-| High | `allowBackup` is enabled with sample/default backup rules. Local preferences include display name, music taste terms, and search history; library history/favorites are local Room data. | Decide backup/privacy behavior, configure precise backup exclusions or consent, and align privacy disclosures. |
-| High | No published privacy policy or Play Data Safety declaration was verified. | Publish disclosures that match actual provider traffic and SDK behavior; complete Data Safety in Play Console. |
-| High | Release signing reads a private per-user properties file; no signed release has been installed or exercised. | Verify signing identity, safely back up the key, and install/test the signed release before any permitted distribution. |
+| Critical | The app uses undocumented YouTube/YouTube Music InnerTube endpoints and supports audio extraction/background playback. Relevant official terms/policies restrict automated access, undocumented APIs, audio separation, and background playback depending on scope and applicability. No written authorization is documented. | Obtain written permission or replace the integration with a permitted source before further distribution. See [InnerTube notes](INNER_TUBE_NOTES.md) and [risk register](RISK_REGISTER.md). |
+| Critical | Rights/permission for remotely supplied music and lyrics, metadata/artwork, and all bundled assets have not been comprehensively audited. | Keep media out of the APK/repository unless licensed; review source and rights terms for every service and asset. |
+| High | A complete public privacy policy and exact Android backup/deletion behavior have not been established. | Verify backup rules, provide a real user contact path, and publish accurate privacy disclosures before store submission. |
+| High | The private signing key is local to the maintainer; backup/restore has not been verified. | Make and test encrypted off-device backups. Never commit the keystore or signing properties. |
+| High | Full physical-device release regression was not performed. | Run the cases in [TEST_PLAN.md](TEST_PLAN.md), including stream, seek, background, notification, Bluetooth, clean-install, and upgrade checks. |
+| High | Lint has remaining findings; dependency advisories and transitive license inventory were not scanned. | Review lint output; run vulnerability, SBOM, and license scans against the exact next release build. |
 
-## Checks observed in this checkout
+## Checks completed
 
-| Area | Result | Evidence / limit |
+| Check | Result | Limit |
 | --- | --- | --- |
-| Source secret scan | **Needs review** | No private-key or common cloud-token pattern was found by the targeted scan. A public InnerTube client key is embedded in source and appears in Git history; it is not a confidential user/server secret, but its ownership and provider terms still need review. No dedicated Gitleaks/TruffleHog binary is installed, so this is not a comprehensive secrets audit. |
-| Ignore rules | **Pass, limited** | `local.properties` is ignored. No keystore file was found in ignored workspace status. The scan did not verify remote repositories, CI secrets, or every historical blob. |
-| Release signing | **Pass for local artifact** | Release key and properties are outside the checkout under `%USERPROFILE%/.android/`; `apksigner` reports the signing certificate. Back up the keystore and properties securely. |
-| Debuggable/release shrink | **Partial pass** | Release merged manifest has no `debuggable=true`; R8/minified APK and AAB tasks pass. APK/AAB signatures were verified; full artifact contents were not exhaustively inspected. |
-| Network transport | **Partial** | App endpoints inspected use HTTPS, OkHttp uses normal platform TLS validation, and no cleartext opt-in is present. No live TLS interception, certificate, timeout, offline, or HTTP error testing was performed. |
-| URL/token logging | **Partial pass** | Search-query and exception/URL log content was removed in this review. Stream code logs host/range/status metadata. Static scan is not a complete runtime log capture; inspect final release logs on-device. |
-| Exported components | **Pass, manifest-level** | Launcher activity is exported; media playback service is not. No other app components are declared in the main manifest. |
-| Permissions | **Partial pass** | Manifest requests Internet and foreground media playback only. OS/runtime behavior still needs testing on supported Android versions. |
-| Local data | **Partial** | Favorites, history, playlists, settings, taste terms, and recent searches are stored locally. No account system, analytics, or crash SDK appears in the declared app dependencies. Backup is enabled and must be resolved before a privacy claim. |
-| Dependency versions | **Needs review** | Android Lint reported multiple newer versions available. Newer does not automatically mean safer; upgrade in a controlled playback regression cycle and review advisories. |
-| License/attribution | **Partial** | `LICENSE`, `NOTICE`, and `CREDITS.md` exist and document the Echo-Music donor. Complete dependency/license inventory and asset/music rights remain open. |
-| Unit tests | **Pass** | `./gradlew test` completed successfully: 72 tests, 0 failures/errors. No instrumented test task or full device regression was completed in this audit. |
-| Debug assembly | **Pass** | `.\gradlew.bat assembleDebug` completed successfully. This is not a release artifact. |
-| Lint | **Pass with warnings** | `./gradlew lint` completed with 49 warnings and 1 hint, no errors. Media3 unstable APIs are explicitly opted into through module lint configuration; remaining warnings need review. |
-| Current release build | **Pass** | `.\gradlew.bat test lint assembleRelease bundleRelease` completed successfully on 2026-10-07. The APK uses the locally configured release certificate; retain the private key securely. |
-| Release APK/AAB tasks | **Pass, signed** | `test lint assembleRelease bundleRelease` completed successfully. APK verification passed with `apksigner`; AAB verification passed with `jarsigner`. The release was not installed or exercised on a clean device. |
-| Device playback | **Not verified** | A connected Android device is available, but full stream, seek, retry, background, notification, lock-screen, Bluetooth, and long-session scenarios were not run here. |
-| GitHub APK release | **Triggered** | Tag `v1.0.0` invokes `.github/workflows/publish-apk.yml` to create the GitHub Release with the signed APK and SHA-256 file. Confirm the workflow completes successfully on GitHub. |
-| Store readiness | **Not verified** | No Play Console access, listing, internal track, Data Safety submission, or review status was available. |
+| Unit tests | Pass: 72 tests, no failures/errors recorded | Unit tests do not establish real provider behavior or device playback reliability. |
+| Lint | Pass with 49 warnings and 1 hint; no errors | Warnings remain to review. |
+| Debug/release build | `assembleDebug`, `assembleRelease`, and `bundleRelease` succeeded | Build success does not establish provider authorization or store readiness. |
+| Artifact signatures | APK verified with `apksigner`; AAB verified with `jarsigner` | The signed release was not installed and tested on a clean device. |
+| GitHub publication | Release workflow completed successfully for `v1.0.0`; APK and checksum are listed as assets | No Play Store submission or approval. |
+| UI smoke check | Debug app installed/launched for visual UI review | No full functional playback, lifecycle, network failure, or accessibility regression. |
+| Manifest | Launcher activity is exported; playback service is not; permissions include Internet and media playback foreground service | Static manifest review only; does not replace runtime testing. |
+| Network/log review | HTTPS endpoints observed; selected search/error log content was removed | Not a TLS test or exhaustive release-log capture. Some diagnostics still include track IDs, hostnames, and response metadata. |
+| Source secret scan | Targeted pattern scan found public InnerTube client identifiers in source/history; no private signing key is in the repository | Not a full Git-history scan or dedicated Gitleaks/TruffleHog audit. Public client identifiers are not proof of authorization. |
+| Dependencies/licenses | Direct dependencies are described in `CREDITS.md` and `THIRD_PARTY_NOTICES.md` | No generated complete transitive SBOM/license report or vulnerability scan. |
 
-## Release gate
+## Maintainer actions
 
-Do not label this build releasable until the critical rows above are closed. At minimum:
+1. Resolve provider authorization and media rights before further distribution.
+2. Protect and back up the signing key; verify future artifacts use the same signer.
+3. Verify Android backup behavior and publish a complete privacy policy with a private contact method.
+4. Review lint warnings; run dependency vulnerability, SBOM, and license scans.
+5. Complete physical-device regression and accessibility checks before another release.
+6. Keep current release notes, source tag, checksums, and test evidence together.
 
-1. Configure and protect release signing; build and inspect a signed AAB/APK.
-2. Run current dependency security and license scans; review current provider/API terms and media rights.
-3. Decide backup and privacy behavior; publish the policy and complete Data Safety disclosures.
-4. Run `assembleRelease`, `bundleRelease`, `test`, and `lint`; resolve all errors and review warnings.
-5. Install the signed release on a clean physical device and repeat playback, seeking/range, resolver recovery, lifecycle, notifications, lock screen, Bluetooth, accessibility, and upgrade checks.
-6. Inspect artifact contents and logs for secrets, debug endpoints, test data, signed URLs, tokens, and debug-only UI.
-7. Complete Play internal testing and store review before production release.
-
-Related records: [Privacy](PRIVACY.md), [Test plan](TEST_PLAN.md), [InnerTube notes](INNER_TUBE_NOTES.md), and root [SECURITY.md](../SECURITY.md).
+See [release process](RELEASE_PROCESS.md), [risk register](RISK_REGISTER.md), [privacy inventory](PRIVACY.md), and [test plan](TEST_PLAN.md) for the detailed follow-up.

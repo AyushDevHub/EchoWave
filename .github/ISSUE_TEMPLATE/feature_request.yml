@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a user-facing improvement or capability.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Requests must respect playback reliability, user privacy, third-party terms, and project licensing.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user need or friction does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the change from the user's perspective.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Other ways you considered solving the problem.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched for an existing request.
+          required: true
+        - label: This request does not depend on bypassing a provider restriction or using unauthorized content.
+          required: true

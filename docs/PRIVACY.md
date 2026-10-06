@@ -1,26 +1,36 @@
-# EchoWave privacy notes
+# Privacy and Data Inventory
 
-**Status:** implementation inventory for review, not a published privacy policy or legal advice.
+**Last reviewed:** 2026-10-07
+**Status:** repository-level implementation inventory. This is not a substitute for a legally reviewed public privacy policy or a Google Play Data Safety declaration.
 
-## Data stored on the device
+## Data handled by EchoWave
 
-- Display name, greeting toggle, theme, and music taste terms are stored in Android DataStore preferences.
-- Recent searches are stored locally (up to 10 query strings).
-- Favorites, playlists, and listening history are stored in the local Room database.
-- Playback queue and current playback state are managed by the player/session while the app is running.
+Based on the current app source:
 
-The app has no account/login flow and no analytics or crash-reporting SDK is declared in the app module. Android backup is enabled in the manifest with the sample backup configuration; cloud/device-transfer behavior must be decided and tested before making a “device-only” privacy claim.
+| Data | Purpose | Storage / handling |
+| --- | --- | --- |
+| Display name, greeting preference, appearance and theme | Personalize the interface | Android DataStore on device |
+| Music preference text | Tailor local discovery requests/suggestions | Android DataStore; may be used in provider search requests |
+| Recent search terms (up to 10) | Show recent searches | Android DataStore; user can clear from Search |
+| Favorites, playlists, listening history | Provide local library features | Room database on device |
+| Visitor identifier returned by InnerTube | Maintain provider request context | SharedPreferences on device; sent to YouTube endpoints |
+| Current queue and playback position/state | Operate the media session | Playback service/player while in use; persistence behavior may vary by lifecycle |
 
-## Network services
+The app has no EchoWave account service, and no analytics or crash-reporting SDK is declared in the app module. Android backup is enabled. The provided backup-rule files contain no custom inclusion/exclusion policy, so do not promise that stored preferences or library data are excluded from device/cloud backup. Users can clear app storage or uninstall to reset local state; uninstall behavior depends on Android backup/restore settings.
 
-Search and stream resolution use YouTube Music/YouTube InnerTube endpoints. Discovery uses the same provider. Lyrics can query LyricsPlus mirrors and LRCLIB. Artwork URLs are loaded from provider metadata. Search terms, track IDs/metadata, network identifiers, and service requests may therefore be sent to those independently operated services. Provider practices and terms are separate from EchoWave.
+## Network services and data sent
 
-EchoWave does not host music. This inventory does not establish that a provider permits the app's use or that a user's use is lawful in their region.
+The app makes requests to YouTube/YouTube Music InnerTube endpoints for search, discovery, metadata, and playback; it loads artwork referenced by metadata. Lyrics lookup can contact LRCLIB and several independently operated LyricsPlus mirrors/catalog endpoints. Those services receive request data such as search terms or track metadata, IP address, and normal network/request metadata. Their own handling and retention practices are outside EchoWave's control and have not been independently verified.
 
-## User controls and data deletion
+EchoWave does not operate a backend that collects these requests. Network providers may log or process them according to their own terms and policies. The current YouTube source is unofficial and has unresolved provider-policy risk; see [InnerTube notes](INNER_TUBE_NOTES.md).
 
-Recent search terms can be cleared from Search. Favorites and playlists can be changed in Library. The current UI does not provide a single “delete all local data” action; Android app-data clearing/uninstall is the available whole-app reset. Add an in-app reset and verify database/backup deletion before release if product policy requires it.
+## User controls
 
-## Before publication
+- Clear recent searches using the Search screen's clear action.
+- Remove favorites, playlists, or history items through the Library UI where supported.
+- Change or disable the greeting, name, theme, and taste preferences in Settings.
+- Clear all app data through Android system settings to reset local app storage.
 
-Publish an accurate policy covering provider requests, local history, backup behavior, retention/deletion, children's use, and contact details. Review SDK/dependency data practices and complete Google Play Data Safety using the final release build. Do not treat this implementation note as the public policy.
+## Before app-store distribution
+
+The project must publish a user-facing policy with a responsible contact method, verify exact backup and deletion behavior, review third-party SDK/service handling, and complete the relevant store privacy disclosures. The GitHub repository issue tracker is not a suitable place to post a user's private data or deletion request.
