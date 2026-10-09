@@ -2,7 +2,7 @@
 
 User-visible changes are listed here. Internal maintenance and exhaustive file changes are recorded in Git history.
 
-## 1.0.1 (candidate; not released)
+## 1.0.1 (2026-10-10)
 
 - Expanded discovery with typed search filters, album detail track lists, browse collections, and seed-based radio autoplay from a selected song.
 - Added a private, on-device listening profile and recommendations informed by the seed, recent plays and skips, favorites, and library history. Listening events are stored locally; the profile and history are not sent with radio requests.
@@ -11,7 +11,7 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 - Removed three unused MP3 resources with undocumented provenance from the current source tree; earlier Git history still contains them.
 - Added a compact Home-screen update chip that checks GitHub Releases and opens the release page when a newer APK is available.
 
-This candidate has not been published. See [release status](RELEASE_PROCESS.md) for the open provider authorization and content-rights release gate.
+Published as a GitHub APK release. Provider authorization and content-rights review remain unresolved; see [release status](RELEASE_PROCESS.md) and [release notes](releases/1.0.1.md).
 
 ## 1.0.0 — 2026-10-07
 

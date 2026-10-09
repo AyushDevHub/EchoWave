@@ -1,10 +1,10 @@
 # Release Process
 
-This document records how the public v1.0.0 APK was assembled and what to do for future releases. GitHub repository releases are public downloads. The next candidate is v1.0.1 (versionCode 2); it is not cleared for public release.
+This document records how EchoWave APK releases are assembled. GitHub repository releases are public downloads. Version 1.0.1 was published on 2026-10-10 while the provider authorization and content-rights questions were unresolved. This was a maintainer decision and does not establish permission, rights, or provider approval. Those critical risks remain open for future releases.
 
 ## Before the next release
 
-1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). YouTube's [published API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) say undocumented APIs must not be used without express permission. Three unused MP3 resources with undocumented provenance were removed from the current source tree; earlier Git revisions retain them. Rebuild and inspect the release APK to confirm they are absent, and review whether the historical files may remain public. The register also records undocumented YouTube/YouTube Music access and uncleared rights as critical risks; obtain written permission or replace the integration with permitted sources before further distribution. A GitHub release does not grant rights or provider authorization. As of 2026-10-10, this release gate remains open.
+1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). YouTube's [published API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) say undocumented APIs must not be used without express permission. Three unused MP3 resources with undocumented provenance were removed from the current source tree; earlier Git revisions retain them. Review whether the historical files may remain public. The register records undocumented YouTube/YouTube Music access and uncleared rights as critical risks; obtain written permission or replace the integration with permitted sources before the next distribution. A GitHub release does not grant rights or provider authorization. These risks remain unresolved after v1.0.1.
 2. Update `versionCode` and `versionName` in `app/build.gradle.kts`; choose a new release tag, notes file, and APK asset name.
 3. Review the open issues and risk register. Update the privacy notice, credits, notices, and changelog for all behavior/dependency/source changes.
 4. Run `test`, `lint`, `assembleRelease`, and `bundleRelease`. Review every lint warning and build output.
@@ -12,14 +12,14 @@ This document records how the public v1.0.0 APK was assembled and what to do for
 6. Verify the APK signature and checksum. Never publish an unsigned artifact or include the signing key in the repository or GitHub Actions logs.
 7. Write release notes that state supported Android versions, known limitations, source changes, and provider/rights caveats.
 
-## v1.0.1 candidate status (2026-10-10)
+## v1.0.1 release status (2026-10-10)
 
 - Version set to 1.0.1 / versionCode 2 so an eventual signed update can upgrade v1.0.0.
 - The Home screen now checks GitHub's latest release metadata and displays a compact update chip when a newer APK is available. The first release containing this checker still needs to be announced manually; future availability is surfaced while the app is open.
 - Lyrics track-change and playback checks were run on the Moto G96 5G using a debug build; see [TEST_PLAN.md](TEST_PLAN.md). This is not a full release-device regression.
 - The earlier debug APK packaged `idiots.mp3`, `desi_girl.mp3`, and `chamak_challo.mp3`; the files were unused and have now been removed from the source tree. Rebuild and inspect the candidate APK before any distribution. Their origin and distribution rights remain unknown, and earlier Git revisions retain them.
-- A signed 1.0.1 release APK was rebuilt locally on 2026-10-10. Its signature verifies and matches the v1.0.0 certificate; the APK archive contains none of the three removed MP3 files. It has not been tested on-device or published. Current unit/lint/build evidence is recorded in [TEST_PLAN.md](TEST_PLAN.md).
-- Do not create or publish a `v1.0.1` GitHub release until the critical provider authorization and content-rights gate above is resolved. The candidate version and local build do not imply approval to distribute it.
+- A signed 1.0.1 APK was built locally on 2026-10-10. Its signature verifies and matches the v1.0.0 certificate; the APK archive contains none of the three removed MP3 files. The debug build received a limited device smoke check; full signed-release device regression was not completed. Current unit/lint/build evidence is recorded in [TEST_PLAN.md](TEST_PLAN.md).
+- Version 1.0.1 was published despite the unresolved provider authorization and content-rights review. The release notes disclose this status. The next release should not proceed until the critical risks are resolved.
 
 ## Signing key
 

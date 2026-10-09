@@ -4,7 +4,7 @@
 [![Latest release](https://img.shields.io/github/v/release/AyushDevHub/EchoWave)](https://github.com/AyushDevHub/EchoWave/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-EchoWave is an Android music player built with Kotlin, Jetpack Compose, and AndroidX Media3. It includes search and discovery, local playlists and favorites, listening history, lyrics, background playback controls, personal themes, and a compact player.
+EchoWave is a free, independent Android YouTube Music client. The project does not sell the app. It is built with Kotlin, Jetpack Compose, and AndroidX Media3 and includes search and discovery, local playlists and favorites, listening history, lyrics, background playback controls, personal themes, and a compact player. It is not affiliated with or endorsed by YouTube or Google.
 
 ## Download
 
@@ -39,7 +39,7 @@ Provider behavior can change independently of EchoWave. Some fallback resolvers 
 
 EchoWave adapts selected InnerTube stream and PO-token approaches from [Echo-Music](https://github.com/EchoMusicApp/Echo-Music); the vendored asset and adapted areas are listed in [CREDITS.md](CREDITS.md). The project also credits its text-matching code port and other reference-only projects there. EchoWave's recommendation ranking and on-device listening profile are project code; local listening events and the profile are not sent with radio requests. See [third-party notices](THIRD_PARTY_NOTICES.md) for dependencies and [privacy notes](docs/PRIVACY.md) for data handling.
 
-The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Three unused MP3 resources with unknown provenance have been removed from the current source tree; earlier Git revisions still contain them. The next APK release remains blocked pending the provider and content-rights review described in the [risk register](docs/RISK_REGISTER.md).
+The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Version 1.0.1 has been published while the provider and content-rights review remains unresolved; publication and the fact that the app is free do not establish authorization or rights. See the [risk register](docs/RISK_REGISTER.md). Three unused MP3 resources with unknown provenance have been removed from the current source tree; earlier Git revisions still contain them.
 
 ## Build from source
 
@@ -67,7 +67,7 @@ Release signing keys are private and must never be committed. For a local releas
 .\gradlew.bat assembleRelease bundleRelease
 ```
 
-The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. The public v1.0.0 APK is the latest published artifact. A v1.0.1 candidate has been tested on a Moto G96 5G for lyrics synchronization and track changes; full device regression is incomplete, and the release checklist's provider authorization and content-rights prerequisite remains unresolved. Build success does not establish provider authorization, privacy compliance, or store approval.
+The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. Version 1.0.1 is the latest release. It was tested on a Moto G96 5G for lyrics synchronization and track changes; full device regression is incomplete. Provider authorization and content-rights review remain unresolved. Build success does not establish provider authorization, privacy compliance, or store approval.
 
 ## Project structure
 
