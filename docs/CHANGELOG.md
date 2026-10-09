@@ -8,6 +8,7 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 - Added a private, on-device listening profile and recommendations informed by the seed, recent plays and skips, favorites, and library history. Listening events are stored locally; the profile and history are not sent with radio requests.
 - Improved track-change lyrics state and lyric timing, adjusted seek rebuffer behavior, and expanded provider, privacy, dependency, and release documentation.
 - Added direct attribution for the selected Echo-Music donor implementation areas and documented which recommendation work is EchoWave code.
+- Removed three unused MP3 resources with undocumented provenance from the current source tree; earlier Git history still contains them.
 
 This candidate has not been published. See [release status](RELEASE_PROCESS.md) for the open provider authorization and content-rights release gate.
 

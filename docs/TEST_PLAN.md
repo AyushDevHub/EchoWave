@@ -53,6 +53,8 @@ Automated checks for the 1.0.1 candidate source completed on 2026-10-10: `test l
 
 The current source checkout was rechecked on 2026-10-10 with `test lint assembleDebug`. The forced `test --rerun-tasks` execution passed 159 tests across 31 test suites with no failures or errors. Lint completed with 0 errors, 49 warnings, and 2 hints; the warnings remain to be reviewed. The build emitted Kotlin/JDK target fallback warnings (the installed JDK target is newer than Kotlin's supported target); these are build-toolchain warnings, not proof that runtime behavior is correct. The debug APK installed on the connected Moto G96 5G and its launcher activity came to the foreground. This was a launch smoke check only; it does not replace the release-mode device regression matrix or verify network playback.
 
+After removing the unused MP3 files, `test lint assembleRelease` was rerun on 2026-10-10 and succeeded. The fresh unit run again passed 159 tests in 31 suites. Lint reported 0 errors, 46 warnings, and 2 hints. `app-release.apk` verified with `apksigner`; its certificate SHA-256 matches the v1.0.0 APK certificate (`08584910f251a6edab224f11f765868e3a4eb92ffb03a3b47894fcb10dd35374`). The release APK archive contains none of the three removed MP3 resources. APK SHA-256: `F388B52ADA3E1D7DAEE0A49710BDCCD290509CB019846A5650D56A193FD27C20`. This release build has not been installed on a device or published; the provider authorization gate remains open.
+
 ## Evidence recorded for v1.0.0
 
 - `test lint assembleRelease bundleRelease` succeeded in the local development environment.

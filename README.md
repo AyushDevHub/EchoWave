@@ -10,6 +10,8 @@ EchoWave is an Android music player built with Kotlin, Jetpack Compose, and Andr
 
 The current public APK is on the [GitHub Releases page](https://github.com/AyushDevHub/EchoWave/releases/latest). Release notes include installation information and a SHA-256 checksum. EchoWave requires Android 8.0 (API 26) or newer.
 
+Updates are manual: EchoWave has no in-app update checker or notification. Maintainers need to announce each release; users can then download the APK from Releases and open it to install. Installing over the existing app preserves its data when the APK uses the same release signing key. Do not uninstall the app to update.
+
 ## Important provider and distribution notice
 
 EchoWave currently uses unofficial YouTube/YouTube Music InnerTube endpoints for search, discovery, metadata, and stream resolution. These are undocumented interfaces and may stop working without notice. EchoWave is not an official YouTube client and is not affiliated with or endorsed by Google or YouTube.
@@ -37,7 +39,7 @@ Provider behavior can change independently of EchoWave. Some fallback resolvers 
 
 EchoWave adapts selected InnerTube stream and PO-token approaches from [Echo-Music](https://github.com/EchoMusicApp/Echo-Music); the vendored asset and adapted areas are listed in [CREDITS.md](CREDITS.md). The project also credits its text-matching code port and other reference-only projects there. EchoWave's recommendation ranking and on-device listening profile are project code; local listening events and the profile are not sent with radio requests. See [third-party notices](THIRD_PARTY_NOTICES.md) for dependencies and [privacy notes](docs/PRIVACY.md) for data handling.
 
-The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Three MP3 files are also included in the Android resources; their origin and distribution rights are unknown. The next APK release remains blocked pending the provider and content-rights review described in the [risk register](docs/RISK_REGISTER.md).
+The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Three unused MP3 resources with unknown provenance have been removed from the current source tree; earlier Git revisions still contain them. The next APK release remains blocked pending the provider and content-rights review described in the [risk register](docs/RISK_REGISTER.md).
 
 ## Build from source
 
