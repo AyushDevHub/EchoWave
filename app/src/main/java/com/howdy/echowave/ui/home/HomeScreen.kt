@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalConfiguration
 import com.howdy.echowave.domain.model.Track
+import com.howdy.echowave.ui.components.AppLogo
 import com.howdy.echowave.ui.components.TrackArtwork
 import com.howdy.echowave.ui.theme.DisplayHeadline
 import com.howdy.echowave.ui.theme.capsLabel
@@ -53,8 +55,6 @@ fun HomeScreen(
     queue: List<Track> = emptyList(),
     queueIndex: Int = 0,
     charts: List<Track> = emptyList(),
-    albums: List<com.howdy.echowave.domain.model.Album> = emptyList(),
-    moods: List<com.howdy.echowave.domain.model.Genre> = emptyList(),
     displayName: String = "",
     greetingEnabled: Boolean = true,
     personalizedTracks: List<Track> = emptyList(),
@@ -62,12 +62,8 @@ fun HomeScreen(
     onPlay: (List<Track>, Int) -> Unit,
     onOpenPlayer: () -> Unit = {},
     onSeeAllCharts: () -> Unit = {},
-    onSeeAllAlbums: () -> Unit = {},
-    onSeeAllMoods: () -> Unit = {},
-    onPlayAlbum: (com.howdy.echowave.domain.model.Album) -> Unit = {},
-    onPlayMood: (com.howdy.echowave.domain.model.Genre) -> Unit = {},
 ) {
-    var filter by remember { mutableStateOf(HomeFilter.FOR_YOU) }
+    var filter by rememberSaveable { mutableStateOf(HomeFilter.FOR_YOU) }
     val mix = remember(recent, favorites) {
         (favorites + recent).distinctBy { it.id }
     }
@@ -85,7 +81,8 @@ fun HomeScreen(
         } else {
             listOfNotNull(current) + recent + favorites
         }
-        (listOfNotNull(current) + orderedQueue).distinctBy { it.id }
+        // Bound hero carousel so empty-library fallback can't grow unbounded.
+        (listOfNotNull(current) + orderedQueue).distinctBy { it.id }.take(25)
     }
     val featureCardWidth = (LocalConfiguration.current.screenWidthDp.dp - 48.dp).coerceAtLeast(260.dp)
 
@@ -99,30 +96,28 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    if (greetingEnabled && displayName.isNotBlank()) {
-                        Text("HELLO,", style = capsLabel(MaterialTheme.typography.labelMedium),
-                            color = MaterialTheme.colorScheme.primary)
-                        Text(displayName.trim(), style = DisplayHeadline,
-                            color = MaterialTheme.colorScheme.onBackground, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis)
-                        Text("Your music, in full color.", style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (greetingEnabled) {
+                        if (displayName.isNotBlank()) {
+                            Text("HELLO,", style = capsLabel(MaterialTheme.typography.labelMedium),
+                                color = MaterialTheme.colorScheme.primary)
+                            Text(displayName.trim(), style = DisplayHeadline,
+                                color = MaterialTheme.colorScheme.onBackground, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
+                        } else {
+                            Text(currentGreeting().uppercase(),
+                                style = capsLabel(MaterialTheme.typography.labelMedium),
+                                color = MaterialTheme.colorScheme.primary)
+                            Text("Welcome to EchoWave.",
+                                style = DisplayHeadline,
+                                color = MaterialTheme.colorScheme.onBackground)
+                        }
                     } else {
-                        if (greetingEnabled) Text(currentGreeting().uppercase(),
-                            style = capsLabel(MaterialTheme.typography.labelMedium),
-                            color = MaterialTheme.colorScheme.primary)
-                        Text("Your music,\nin full color.", style = DisplayHeadline,
+                        Text("EchoWave.",
+                            style = DisplayHeadline,
                             color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
-                Box(
-                    Modifier.size(46.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("E", style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+                AppLogo(size = 46.dp)
             }
         }
         item {
@@ -159,7 +154,7 @@ fun HomeScreen(
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(queuedTracks, key = { "feature-${it.id}" }) { featuredTrack ->
+                    items(queuedTracks, key = { "feature-${it.id}" }, contentType = { "hero" }) { featuredTrack ->
                         HeroCard(
                             track = featuredTrack,
                             width = featureCardWidth,
@@ -177,7 +172,7 @@ fun HomeScreen(
         }
         if (filter == HomeFilter.ARTISTS) {
             item {
-                SectionHeader("Artists to watch", onSeeAll = {})
+                SectionHeader("Artists to watch", onSeeAll = null)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -193,7 +188,7 @@ fun HomeScreen(
             }
         } else {
             item {
-                SectionHeader("Playlists for where you're headed", onSeeAll = {})
+                SectionHeader("Playlists for where you're headed", onSeeAll = null)
             }
             item {
                 LazyRow(
@@ -248,43 +243,30 @@ fun HomeScreen(
                 }
             }
         }
-        if (albums.isNotEmpty()) {
+        if (queuedTracks.isEmpty() && rail.isEmpty() && charts.isEmpty() && personalizedTracks.isEmpty() && !preferenceLoading) {
             item {
-                SectionHeader("New releases", onSeeAll = onSeeAllAlbums)
-            }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    items(albums.take(10)) { a ->
-                        com.howdy.echowave.ui.discover.AlbumCard(a) { onPlayAlbum(a) }
-                    }
+                    Text("Your library is empty", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Search for songs to start your mix.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-        if (moods.isNotEmpty()) {
-            item {
-                SectionHeader("Moods & genres", onSeeAll = onSeeAllMoods)
-            }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(moods.take(10)) { m ->
-                        com.howdy.echowave.ui.discover.MoodButton(m) { onPlayMood(m) }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
             }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, onSeeAll: () -> Unit = {}) {
+private fun SectionHeader(
+    title: String,
+    onSeeAll: (() -> Unit)? = null,
+) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -295,12 +277,15 @@ private fun SectionHeader(title: String, onSeeAll: () -> Unit = {}) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            "See all",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.clickable(onClick = onSeeAll),
-        )
+        // Only show affordance when there's somewhere to go.
+        if (onSeeAll != null) {
+            Text(
+                "See all",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable(onClick = onSeeAll),
+            )
+        }
     }
 }
 

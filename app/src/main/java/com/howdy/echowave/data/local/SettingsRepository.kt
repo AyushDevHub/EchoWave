@@ -9,6 +9,20 @@ import kotlinx.coroutines.flow.map
 
 enum class Appearance { SYSTEM, DARK, LIGHT }
 
+enum class PlayerStyle(val label: String, val description: String) {
+    CURRENT("Classic", "The default player design"),
+    APPLE("Glow", "Artwork atmosphere with word-timed sing-along"),
+    SPOTIFY("Contrast", "Bold lyrics with a clean, high-contrast player"),
+}
+
+enum class FontChoice(val label: String) {
+    SYSTEM("System default"),
+    GOOGLE_SANS("Google Sans (system)"),
+    SANS_FLEX("Sans Flex (system)"),
+    OUTFIT("Outfit"),
+    JAKARTA("Plus Jakarta Sans"),
+}
+
 enum class ThemePreset(val label: String, val primary: Long, val background: Long, val surface: Long, val text: Long) {
     PURPLE("Purple", 0xFFE3B8FF, 0xFF09090D, 0xFF17151D, 0xFFF8F7FC),
     BEIGE_COPPER("Beige copper", 0xFFE0A77E, 0xFF17120F, 0xFF28201B, 0xFFF4E9DE),
@@ -53,18 +67,32 @@ class SettingsRepository(
     val displayName: Flow<String> = store.data.map { it[DISPLAY_NAME].orEmpty() }
     val greetingEnabled: Flow<Boolean> = store.data.map { it[GREETING_ENABLED] ?: true }
     val musicPreferences: Flow<String> = store.data.map { it[MUSIC_PREFERENCES].orEmpty() }
+    /** True once the first-start onboarding (name + taste) has been completed. */
+    val onboardingCompleted: Flow<Boolean> = store.data.map { it[ONBOARDING_COMPLETED] ?: false }
+    val playerStyle: Flow<PlayerStyle> = store.data.map { prefs ->
+        PlayerStyle.entries.firstOrNull { it.name == prefs[PLAYER_STYLE] } ?: PlayerStyle.APPLE
+    }
+    val fontChoice: Flow<FontChoice> = store.data.map { prefs ->
+        FontChoice.entries.firstOrNull { it.name == prefs[FONT_CHOICE] } ?: FontChoice.SYSTEM
+    }
 
     suspend fun setThemePreset(value: ThemePreset) { store.edit { it[THEME_PRESET] = value.name } }
+    suspend fun setPlayerStyle(value: PlayerStyle) { store.edit { it[PLAYER_STYLE] = value.name } }
+    suspend fun setFontChoice(value: FontChoice) { store.edit { it[FONT_CHOICE] = value.name } }
     suspend fun setDisplayName(value: String) { store.edit { it[DISPLAY_NAME] = value.trim().take(40) } }
     suspend fun setGreetingEnabled(value: Boolean) { store.edit { it[GREETING_ENABLED] = value } }
     suspend fun setMusicPreferences(value: String) { store.edit { it[MUSIC_PREFERENCES] = value.trim().take(120) } }
+    suspend fun setOnboardingCompleted(value: Boolean) { store.edit { it[ONBOARDING_COMPLETED] = value } }
 
     companion object {
         const val GITHUB_URL = "https://github.com/AyushDevHub/EchoWave"
         private val APPEARANCE = stringPreferencesKey("appearance")
         private val THEME_PRESET = stringPreferencesKey("theme_preset")
+        private val FONT_CHOICE = stringPreferencesKey("font_choice")
+        private val PLAYER_STYLE = stringPreferencesKey("player_style")
         private val DISPLAY_NAME = stringPreferencesKey("display_name")
         private val GREETING_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("greeting_enabled")
         private val MUSIC_PREFERENCES = stringPreferencesKey("music_preferences")
+        private val ONBOARDING_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_completed")
     }
 }

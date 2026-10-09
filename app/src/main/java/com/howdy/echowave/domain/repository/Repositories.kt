@@ -2,12 +2,13 @@ package com.howdy.echowave.domain.repository
 
 import com.howdy.echowave.core.common.AppResult
 import com.howdy.echowave.domain.model.Playlist
+import com.howdy.echowave.domain.model.SearchResults
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.source.StreamInfo
 import kotlinx.coroutines.flow.Flow
 
 interface MusicRepository {
-    suspend fun search(query: String): AppResult<List<Track>>
+    suspend fun search(query: String): AppResult<SearchResults>
     suspend fun resolveStream(trackId: String): AppResult<StreamInfo>
 }
 

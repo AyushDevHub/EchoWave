@@ -18,6 +18,10 @@ class SearchHistoryRepository(
 
     suspend fun save(query: String) {
         val clean = query.trim().take(80)
+            .replace(SEP, "")
+            .replace("\n", " ")
+            .replace("\r", "")
+            .trim()
         if (clean.isEmpty()) return
         store.edit { prefs ->
             val current = prefs[QUERIES]?.split(SEP)?.filter { it.isNotBlank() } ?: emptyList()
@@ -31,7 +35,7 @@ class SearchHistoryRepository(
 
     companion object {
         const val MAX = 10
-        private const val SEP = ""
+        internal const val SEP = ""
         private val QUERIES = stringPreferencesKey("recent_searches")
     }
 }

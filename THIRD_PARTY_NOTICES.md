@@ -17,8 +17,9 @@ These projects carry their own license terms and notices. Consult the exact reso
 ## Included donor code and service integrations
 
 - `app/src/main/assets/po_token.html` is vendored from [Echo-Music](https://github.com/EchoMusicApp/Echo-Music); its source attribution is retained. EchoWave also adapts portions of the donor's InnerTube/PO-token stream pipeline. See [CREDITS.md](CREDITS.md).
-- Spotube, LastWave-native, NewPipe Extractor, and BravePipe are reference-only or placeholder mentions; their implementation code is not included as an active dependency.
+- Spotube, NewPipe Extractor, and BravePipe are reference-only or placeholder mentions; their implementation code is not included as an active dependency. LastWave-native text-matching (`core/common/TextMatch.kt`) is ported code under GPL-3.0; see [CREDITS.md](CREDITS.md).
 - LyricsPlus-compatible endpoints and LRCLIB are network services, not bundled source code. Their operators' terms and data practices are independent.
+- Search, discovery, radio candidate metadata, stream resolution, and playback currently use undocumented YouTube/YouTube Music InnerTube flows. These network services are not bundled libraries, and this notice does not imply provider authorization. EchoWave's local recommendation scorer is original project code; no third-party recommendation model/library was added for this feature. See [InnerTube notes](docs/INNER_TUBE_NOTES.md) and [privacy inventory](docs/PRIVACY.md).
 - No music or remote artwork is intended to be bundled in the APK. Verify licenses for any future bundled font, icon, image, or media asset.
 
 The `innertubex` coordinate in the version catalog is inactive and is not declared as an app dependency. Recheck the Gradle dependency graph when dependencies change.

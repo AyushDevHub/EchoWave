@@ -30,7 +30,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.howdy.echowave.data.repository.MusicRepositoryImpl
 import com.howdy.echowave.domain.source.ChainedStreamResolver
-import com.howdy.echowave.features.ai.NoOpRecommendationProvider
 import com.howdy.echowave.playback.Media3PlaybackController
 
 /**
@@ -41,8 +40,9 @@ class AppContainer(ctx: Context) {
     private val appCtx = ctx.applicationContext
 
     val db: EchoWaveDb by lazy {
-        // Dev-phase schema churn (v1->v2 playlists): destructive rebuild is
-        // acceptable pre-release; real migrations start at v1.0 ship.
+        // v1 shipped: preserve user library/favorites on upgrade.
+        // Add explicit migrations for future schema changes; destructive
+        // fallback remains only as a last resort for unmigrated versions.
         Room.databaseBuilder(appCtx, EchoWaveDb::class.java, "echowave.db")
             .fallbackToDestructiveMigration()
             .build()
@@ -56,7 +56,7 @@ class AppContainer(ctx: Context) {
     }
 
     private val innerTubeApi by lazy {
-        buildInnerTubeApi(debug = false, visitor = { visitorStore.current() })
+        buildInnerTubeApi(debug = com.howdy.echowave.BuildConfig.DEBUG, visitor = { visitorStore.current() })
     }
 
     val musicSource by lazy { InnerTubeMusicSource(innerTubeApi, visitorStore) }
@@ -99,18 +99,48 @@ class AppContainer(ctx: Context) {
                 VisitorBootstrap.fetch()?.let { visitorStore.offer(it) }
             }
         }
+        scope.launch {
+            runCatching {
+                dnaRepository.prune()
+                dnaRepository.recompute()
+            }
+        }
         poTokens.prewarm()
     }
 
     val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver) }
     val discoveryRepo by lazy { DiscoveryRepositoryImpl(innerTubeApi, visitorStore) }
     val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao(), db.playlistDao()) }
+    val dnaRepository by lazy {
+        com.howdy.echowave.data.dna.DnaRepositoryImpl(db.listeningEventDao(), prefs, scope)
+    }
     val historyRepo by lazy { SearchHistoryRepository(prefs) }
     val lyricsRepo by lazy { LyricsRepository() }
     val settingsRepo by lazy { SettingsRepository(prefs) }
-    val recommendations by lazy { NoOpRecommendationProvider() }
+    val candidateCache by lazy { com.howdy.echowave.domain.recommendation.CandidateCache() }
+    val radioCandidateSource by lazy {
+        com.howdy.echowave.data.remote.innertube.InnerTubeRadioCandidateSource(innerTubeApi, visitorStore, candidateCache)
+    }
+    val libraryCandidateSource by lazy {
+        com.howdy.echowave.data.repository.LibraryCandidateSource(db.trackDao())
+    }
+    val candidatePipeline by lazy {
+        com.howdy.echowave.domain.recommendation.CandidatePipeline(
+            listOf(radioCandidateSource, libraryCandidateSource),
+        )
+    }
 
-    val playback by lazy { Media3PlaybackController(musicRepo, libraryRepo) }
+    val playback by lazy {
+        Media3PlaybackController(
+            music = musicRepo,
+            library = libraryRepo,
+            dna = dnaRepository,
+            candidatePipeline = candidatePipeline,
+            dnaProfileProvider = { dnaRepository.currentProfile() },
+            favoriteTrackIdsProvider = { libraryRepo.favorites().mapTo(mutableSetOf()) { it.id } },
+            recentPlayedProvider = { libraryRepo.history(50) },
+        )
+    }
 
     /**
      * Single app-lifetime session connection. Activity recreation reuses it

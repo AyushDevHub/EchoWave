@@ -1,11 +1,8 @@
 package com.howdy.echowave.data.remote.lyrics
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -82,17 +79,16 @@ object YouLyPlus {
         artist: String?,
         durationSec: Double?,
         album: String? = null,
-    ): String? {
+    ): String? = kotlinx.coroutines.coroutineScope {
         val ordered = lastWorking.get()?.let { w -> listOf(w) + SERVERS.filter { it != w } } ?: SERVERS
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val jobs = ordered.map { server -> server to scope.async { fetchOne(server, title, artist, durationSec, album) } }
+        val jobs = ordered.map { server -> server to async(Dispatchers.IO) { fetchOne(server, title, artist, durationSec, album) } }
+        val binimumDeferred = async(Dispatchers.IO) { fetchBinimum(title, artist, durationSec, album) }
         try {
             // The old JSON mirrors can be rate limited or retired. Binimum's
             // catalog returns a signed TTML URL and remains a separate route.
             // Keep Binimum as a fallback while checking JSON mirrors: some
             // mirrors provide per-word timestamps even when Binimum only has
             // line timing for the same track.
-            val binimumLyrics = fetchBinimum(title, artist, durationSec, album)
             val remaining = jobs.toMutableList()
             var fallback: String? = null
             while (remaining.isNotEmpty()) {
@@ -105,7 +101,9 @@ object YouLyPlus {
                     if (resp.hasWordSync() || lrc.hasInlineWordSync()) {
                         lastWorking.set(server)
                         Log.d("EchoWaveLyrics", "LyricsPlus selected word-synced mirror=${server.substringAfter("//")}")
-                        return lrc
+                        remaining.forEach { it.second.cancel() }
+                        binimumDeferred.cancel()
+                        return@coroutineScope lrc
                     }
                     if (fallback == null) {
                         fallback = lrc
@@ -113,13 +111,15 @@ object YouLyPlus {
                     }
                 }
             }
+            val binimumLyrics = runCatching { binimumDeferred.await() }.getOrNull()
             if (binimumLyrics.hasInlineWordSync()) {
                 Log.d("EchoWaveLyrics", "LyricsPlus selected word-synced Binimum fallback")
-                return binimumLyrics
+                return@coroutineScope binimumLyrics
             }
-            return fallback ?: binimumLyrics
+            return@coroutineScope fallback ?: binimumLyrics
         } finally {
-            scope.coroutineContext.cancelChildren()
+            jobs.forEach { it.second.cancel() }
+            binimumDeferred.cancel()
         }
     }
 
@@ -282,11 +282,11 @@ object YouLyPlus {
         (seconds * 1000).toLong()
     }.getOrNull()
 
-    /** KPoe items (optional word syllables) -> LRC. Pure + tested. */
+    /** KPoe items (optional word syllables) -> LRC. Pure + tested. Time is seconds; LRC needs ms. */
     internal fun List<YouLyPlusItem>.convertToLrc(): String? {
         if (isEmpty()) return null
         return joinToString("\n") { item ->
-            val stamp = formatLrc((item.time ?: 0.0).toLong())
+            val stamp = formatLrc(((item.time ?: 0.0) * 1000).toLong())
             val syls = item.syllabus
             if (syls.isNullOrEmpty()) {
                 stamp + (item.text ?: "")
@@ -294,7 +294,7 @@ object YouLyPlus {
                 buildString {
                     append(stamp)
                     syls.forEach { s ->
-                        append(formatSyl((s.time ?: 0.0).toLong()))
+                        append(formatSyl(((s.time ?: 0.0) * 1000).toLong()))
                         append(s.text ?: "")
                         if (s.text?.endsWith(" ") == false) append(" ")
                     }

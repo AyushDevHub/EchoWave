@@ -48,18 +48,30 @@ class LyricsRepository(
         val result = withTimeoutOrNull(30_000) { withContext(Dispatchers.IO) {
             // LyricsPlus can return enhanced word timestamps, line-synced LRC,
             // or plain text. Prefer word-sync whenever the payload has it.
-            val fromPlus = YouLyPlus.fetch(
+            val plusPayload = YouLyPlus.fetch(
                 title = track.title,
                 artist = track.lyricsArtist().takeIf { it.isNotBlank() },
                 durationSec = track.durationMs?.toDouble()?.div(1000.0),
                 album = track.album,
-            )?.let { payload ->
+            )
+            val plusLines = plusPayload?.let { payload ->
                 parseLrc(payload).takeIf { it.isNotEmpty() }
                     ?: payload.lineSequence().map(String::trim)
                         .filter { it.isNotEmpty() && !it.startsWith("[") }
                         .map { LrcLine(0, it) }.toList().takeIf { it.isNotEmpty() }
+            }?.filterNot { line ->
+                val text = line.text.lowercase()
+                val title = track.title.trim().lowercase()
+                val artist = track.artist.trim().lowercase()
+                title.length > 2 && artist.length > 2 && text.contains(title) && text.contains(artist)
             }
-            fromPlus ?: fetchLrclib(track)
+            val normalizedPlus = plusLines?.let { normalizeLyricTiming(it, track.durationMs) }
+            // A provider can return malformed word times (for example, seconds
+            // scaled twice). Prefer another timed source over freezing every
+            // line at zero or showing timestamps beyond the track duration.
+            normalizedPlus?.takeIf { it.any { line -> line.ms > 0L } }
+                ?: fetchLrclib(track)
+                ?: plusLines
         } } ?: run {
             android.util.Log.w("EchoWaveLyrics", "Lyrics lookup timed out")
             null
@@ -152,7 +164,7 @@ class LyricsRepository(
     private fun parseLrclibResult(result: LrclibResponse): List<LrcLine>? {
         val synced = result.syncedLyrics?.let(::parseLrc)?.takeIf { it.isNotEmpty() }
         return synced ?: result.plainLyrics
-            ?.lineSequence()?.map { LrcLine(0, it) }?.toList()
+            ?.lineSequence()?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { LrcLine(0, it) }?.toList()
             ?.takeIf { it.isNotEmpty() }
     }
 
@@ -161,13 +173,39 @@ class LyricsRepository(
             val r = json.decodeFromString(LrclibResponse.serializer(), body)
             val synced = r.syncedLyrics?.let(::parseLrc)?.takeIf { it.isNotEmpty() }
             synced ?: r.plainLyrics
-                ?.lineSequence()?.map { LrcLine(0, it) }?.toList()
+                ?.lineSequence()?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { LrcLine(0, it) }?.toList()
                 ?.takeIf { it.isNotEmpty() }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             null
         }
+    }
+}
+
+/** Corrects a consistent seconds/milliseconds scale error when duration is known. */
+internal fun normalizeLyricTiming(lines: List<LrcLine>, durationMs: Long?): List<LrcLine> {
+    val maximum = lines.asSequence()
+        .flatMap { sequenceOf(it.ms) + it.words.asSequence().map(LrcWord::ms) }
+        .maxOrNull() ?: return lines
+    val divideByThousand = if (durationMs != null && durationMs > 0L) {
+        maximum > durationMs * 1.25 && maximum / 1000L <= durationMs * 1.1
+    } else {
+        // Song lyrics should not span an hour. This catches a seconds to
+        // milliseconds conversion applied twice when track metadata lacks a
+        // duration, while leaving ordinary LRC timestamps untouched.
+        maximum > 3_600_000L && maximum / 1000L <= 3_600_000L
+    }
+    if (!divideByThousand) return lines
+    return lines.map { line ->
+        val words = line.words.map { word ->
+            word.copy(ms = word.ms / 1000L)
+        }
+        val lineMs = line.ms / 1000L
+        line.copy(
+            ms = lineMs.takeIf { it > 0L } ?: words.firstOrNull { it.ms > 0L }?.ms ?: 0L,
+            words = words,
+        )
     }
 }
 

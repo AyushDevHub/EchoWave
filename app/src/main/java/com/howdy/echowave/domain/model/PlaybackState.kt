@@ -10,5 +10,8 @@ data class PlaybackState(
     val queueIndex: Int = -1,
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
+    val volume: Float = 1f,
     val error: String? = null,
+    val isLoadingNext: Boolean = false,
+    val nextTracksMessage: String? = null,
 )

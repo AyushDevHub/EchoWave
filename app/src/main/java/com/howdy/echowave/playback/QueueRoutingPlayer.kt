@@ -50,17 +50,19 @@ class QueueRoutingPlayer(wrapped: Player) : ForwardingPlayer(wrapped) {
 
     override fun getAvailableCommands(): Player.Commands {
         val base = super.getAvailableCommands()
-        // Advertise whenever a queue owner is installed, not per bounds:
-        // the answer must be stable at notification-build time, because no
-        // event fires when the queue merely fills. Bounds are guarded in
-        // the controller (next/prev at the ends are no-ops).
         if (PlaybackRouter.onNext == null && PlaybackRouter.onPrevious == null) return base
-        return base.buildUpon()
-            .add(Player.COMMAND_SEEK_TO_NEXT)
-            .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-            .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-            .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-            .build()
+        // Per-bounds advertising so notification/lock-screen only show
+        // actions that will do something.
+        val builder = base.buildUpon()
+        if (PlaybackRouter.onNext != null && PlaybackRouter.canNext()) {
+            builder.add(Player.COMMAND_SEEK_TO_NEXT)
+            builder.add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+        }
+        if (PlaybackRouter.onPrevious != null && PlaybackRouter.canPrevious()) {
+            builder.add(Player.COMMAND_SEEK_TO_PREVIOUS)
+            builder.add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+        }
+        return builder.build()
     }
 
     companion object {

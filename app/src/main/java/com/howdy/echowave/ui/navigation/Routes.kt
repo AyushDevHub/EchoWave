@@ -6,7 +6,11 @@ object Routes {
     const val LIBRARY = "library"
     const val NOW_PLAYING = "now_playing"
     const val SETTINGS = "settings"
+    const val SETTINGS_APPEARANCE = "settings_appearance"
+    const val SETTINGS_PLAYBACK = "settings_playback"
+    const val SETTINGS_ABOUT = "settings_about"
     const val CHARTS = "charts"
-    const val NEW_RELEASES = "new_releases"
-    const val MOODS = "moods"
+    const val ONBOARDING = "onboarding"
+    const val ONBOARDING_EDIT = "onboarding_edit"
+    const val ALBUM = "album"
 }

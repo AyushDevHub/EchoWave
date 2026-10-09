@@ -2,6 +2,12 @@
 
 User-visible changes are listed here. Internal maintenance and exhaustive file changes are recorded in Git history.
 
+## Unreleased
+
+- Search song taps now start seed-based radio autoplay instead of queueing the remaining search results ahead of recommendations.
+- Recommendation ranking now uses seed style/language, recent skips and plays, the local taste profile, favorites, and recent library history; local taste data stays on device.
+- Reduced the playback rebuffer threshold after seeks and documented YouTube/YouTube Music data flows, local recommendation signals, caching, and the unofficial provider status.
+
 ## 1.0.0 — 2026-10-07
 
 First public GitHub APK release.

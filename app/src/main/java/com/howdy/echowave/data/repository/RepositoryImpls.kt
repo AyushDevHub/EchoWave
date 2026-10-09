@@ -54,12 +54,15 @@ class LibraryRepositoryImpl(
     override suspend fun isFavorite(id: String) = dao.isFavorite(id)
     override suspend fun history(limit: Int) = dao.history(limit).map { it.toDomain() }
     override suspend fun recordPlayed(track: Track) {
-        // Preserve the favorite flag: plain upsert would wipe it.
+        // Preserve the favorite flag but refresh stale metadata on replay.
         val existing = dao.get(track.id)
+        val now = System.currentTimeMillis()
         if (existing == null) {
-            dao.insertIgnore(track.toEntity(lastPlayedAt = System.currentTimeMillis()))
+            dao.insertIgnore(track.toEntity(lastPlayedAt = now))
         } else {
-            dao.touchPlayed(track.id, System.currentTimeMillis())
+            dao.upsert(
+                track.toEntity(favorite = existing.favorite, lastPlayedAt = now),
+            )
         }
     }
 
@@ -86,19 +89,14 @@ class LibraryRepositoryImpl(
     }
 
     override suspend fun addToPlaylist(playlistId: Long, track: Track) {
-        if (playlists.contains(playlistId, track.id) > 0) return
-        val pos = playlists.count(playlistId)
-        playlists.addTrack(
-            PlaylistTrackEntity(
-                playlistId = playlistId,
-                trackId = track.id,
-                position = pos,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                artworkUrl = track.artworkUrl,
-                durationMs = track.durationMs,
-            ),
+        playlists.addIfAbsent(
+            playlistId = playlistId,
+            trackId = track.id,
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            artworkUrl = track.artworkUrl,
+            durationMs = track.durationMs,
         )
     }
 

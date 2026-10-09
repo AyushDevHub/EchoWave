@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.howdy.echowave.data.local.FontChoice
 import com.howdy.echowave.data.local.ThemePreset
 import com.howdy.echowave.ui.navigation.EchoWaveNavHost
 import com.howdy.echowave.ui.theme.EchoWaveTheme
@@ -21,7 +22,8 @@ class MainActivity : ComponentActivity() {
         container.sessionConnector.connect()
         setContent {
             val themePreset by container.settingsRepo.themePreset.collectAsState(ThemePreset.PURPLE)
-            EchoWaveTheme(preset = themePreset) {
+            val fontChoice by container.settingsRepo.fontChoice.collectAsState(FontChoice.SYSTEM)
+            EchoWaveTheme(preset = themePreset, fontChoice = fontChoice) {
                 EchoWaveNavHost(controller = container.playback)
             }
         }

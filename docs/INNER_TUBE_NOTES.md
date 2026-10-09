@@ -4,7 +4,11 @@
 
 ## What the app does
 
-EchoWave currently sends requests to YouTube Music/YouTube InnerTube endpoints for search, discovery, metadata, visitor state, BotGuard/PO-token handling, stream resolution, and media delivery. The integration is implemented in `data/remote/innertube/`, `data/remote/potoken/`, and `data/playback/`. It is not a supported public API contract. Endpoint shapes, access controls, throttling, and availability can change without notice.
+EchoWave currently sends requests to YouTube Music/YouTube InnerTube endpoints for search, discovery, metadata, visitor state, BotGuard/PO-token handling, stream resolution, radio candidates, and media delivery. A search selection starts a seed-based radio session: EchoWave sends the selected provider track ID to the undocumented `/next` endpoint, parses returned candidates, and ranks them locally using track metadata and on-device taste signals. Candidate metadata is cached in memory for up to two hours. EchoWave does not send its local listening history or DNA profile to that endpoint and does not use or reproduce YouTube's proprietary recommendation model.
+
+The integration is implemented in `data/remote/innertube/`, `data/remote/potoken/`, and `data/playback/`. It is not a supported public API contract. Endpoint shapes, access controls, throttling, and availability can change without notice. The YouTube Data API does not provide this `/next` radio flow; the app's current candidate source remains unofficial and has no documented authorization.
+
+For playback, the app obtains a stream URL from its player-resolution flow and requests bounded byte ranges through Media3. A 500 MiB LRU cache stores fetched media bytes on device; cache entries may be evicted. Stream URLs and request parameters are sensitive runtime values and must never be logged or committed.
 
 Some client identifiers in the app are public identifiers, not private user credentials. They are visible in the source, APK, and Git history. Do not treat that visibility as permission. Never commit account cookies, passwords, OAuth refresh tokens, private backend credentials, or signed stream URLs.
 

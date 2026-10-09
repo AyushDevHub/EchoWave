@@ -21,10 +21,15 @@ import com.howdy.echowave.domain.model.Track
 
 @Composable
 fun TrackRow(track: Track, onClick: () -> Unit, trailing: @Composable (() -> Unit)? = null) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
     ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         TrackArtwork(
             url = track.artworkUrl,
             description = "Artwork for ${track.title}",
@@ -54,5 +59,6 @@ fun TrackRow(track: Track, onClick: () -> Unit, trailing: @Composable (() -> Uni
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         trailing?.invoke()
+        }
     }
 }

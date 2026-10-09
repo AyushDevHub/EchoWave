@@ -18,19 +18,20 @@ class StreamProbe(
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
         .build(),
+    private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
 ) {
     sealed interface Verdict {
         data object Accept : Verdict
         data class Reject(val code: Int) : Verdict
     }
 
-    suspend fun probe(url: String): Verdict = withContext(Dispatchers.IO) {
+    suspend fun probe(url: String): Verdict = withContext(ioDispatcher) {
         val headers = PlayerClient.forStreamUrl(url).mediaHeaders()
         // Donor rule: a preview-only URL serves its first chunk fine and 403s
         // past ~1 MiB, so probe the LAST byte when clen is known. A URL that
         // serves its final byte is not a truncated preview.
         val total = runCatching {
-            url.toHttpUrlOrNull()?.queryParameter("clen")?.toLongOrNull()
+            url.toHttpUrlOrNull()?.queryParameter("clen")?.toLongOrNull()?.takeIf { it > 0 }
         }.getOrNull()
         val range = if (total != null && total > 0) {
             "bytes=${total - 1}-$total"

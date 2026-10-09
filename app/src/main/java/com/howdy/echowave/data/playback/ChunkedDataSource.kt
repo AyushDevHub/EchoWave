@@ -37,7 +37,7 @@ class ChunkedDataSource(
     override fun open(dataSpec: DataSpec): Long {
         baseSpec = dataSpec
         position = dataSpec.position
-        val total = dataSpec.uri.getQueryParameter("clen")?.toLongOrNull()
+        val total = dataSpec.uri.getQueryParameter("clen")?.toLongOrNull()?.takeIf { it > 0 }
         if (total == null) {
             passthrough = true
             chunkOpen = true
@@ -71,6 +71,8 @@ class ChunkedDataSource(
 
     private fun report(spec: DataSpec, e: Exception) {
         if (e is HttpDataSource.InvalidResponseCodeException) {
+            // Normalize to the minted URL so StreamRegistry lookup hits even if
+            // ExoPlayer reordered/encoded query params.
             val url = spec.uri.toString()
             android.util.Log.w(TAG, "range refused status=${e.responseCode} host=${spec.uri.host}")
             runCatching { onRefused(url) }

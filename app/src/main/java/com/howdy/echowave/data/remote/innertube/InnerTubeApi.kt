@@ -72,6 +72,15 @@ interface InnerTubeApi {
         @Header("X-YouTube-Client-Version") clientVersion: String? = null,
         @Body body: JsonObject,
     ): JsonObject
+
+    @POST("next")
+    suspend fun next(
+        @Query("key") key: String? = INNERTUBE_API_KEY,
+        @Query("prettyPrint") prettyPrint: Boolean = false,
+        @Header("X-YouTube-Client-Name") clientId: String? = null,
+        @Header("X-YouTube-Client-Version") clientVersion: String? = null,
+        @Body body: JsonObject,
+    ): JsonObject
 }
 
 fun buildInnerTubeApi(debug: Boolean = false, visitor: () -> String? = { null }): InnerTubeApi {
@@ -125,12 +134,13 @@ private fun clientObj(
     put("clientVersion", version)
     extra()
     put("hl", "en")
-    put("gl", "US")
+    put("gl", "IN")
     if (visitorData != null) put("visitorData", visitorData)
 }
 
-fun searchBody(query: String, visitorData: String? = null): JsonObject = buildJsonObject {    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
+fun searchBody(query: String, visitorData: String? = null, params: String? = null): JsonObject = buildJsonObject {    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
     put("query", query)
+    if (params != null) put("params", params)
 }
 
 fun playerBody(videoId: String, poToken: String? = null, visitorData: String? = null): JsonObject = buildJsonObject {
@@ -141,6 +151,13 @@ fun playerBody(videoId: String, poToken: String? = null, visitorData: String? = 
     }
     put("racyCheckOk", true)
     put("contentCheckOk", true)
+}
+
+fun nextBody(videoId: String, visitorData: String? = null): JsonObject = buildJsonObject {
+    put("context", fullContext(clientObj(INNERTUBE_CLIENT_NAME, INNERTUBE_CLIENT_VERSION, visitorData)))
+    put("videoId", videoId)
+    put("playlistId", "RDAMVM$videoId")
+    put("isAudioOnly", true)
 }
 
 /**

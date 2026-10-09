@@ -77,9 +77,10 @@ fun capsLabel(base: TextStyle = TextStyle.Default): TextStyle = base.copy(
 fun EchoWaveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     preset: ThemePreset = ThemePreset.PURPLE,
+    fontChoice: com.howdy.echowave.data.local.FontChoice = com.howdy.echowave.data.local.FontChoice.SYSTEM,
     content: @Composable () -> Unit,
 ) {
-    val scheme = darkColorScheme(
+    val presetScheme = darkColorScheme(
         primary = Color(preset.primary.toInt()),
         onPrimary = Color(preset.background.toInt()),
         secondary = Color(preset.primary.toInt()).copy(alpha = 0.82f),
@@ -92,9 +93,12 @@ fun EchoWaveTheme(
         surfaceVariant = Color(preset.surface.toInt()).copy(alpha = 0.9f),
         onSurfaceVariant = Color(preset.text.toInt()).copy(alpha = 0.66f),
     )
+    // Presets are dark palettes; in light mode fall back to the
+    // designed light scheme so light theme is actually reachable.
+    val scheme = if (darkTheme) presetScheme else EchoLightScheme
     MaterialTheme(
         colorScheme = scheme,
-        typography = Typography,
+        typography = buildTypography(fontChoice),
         content = content,
     )
 }

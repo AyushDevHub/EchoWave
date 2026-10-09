@@ -9,7 +9,7 @@ import com.howdy.echowave.domain.model.Track
 interface DiscoveryRepository {
     suspend fun charts(limit: Int = 20): AppResult<List<Track>>
     suspend fun newReleases(limit: Int = 20): AppResult<List<Album>>
-    suspend fun albumTracks(albumId: String): AppResult<List<Track>>
+    suspend fun albumTracks(albumId: String, params: String? = null): AppResult<List<Track>>
     suspend fun moods(limit: Int = 40): AppResult<List<Genre>>
     suspend fun moodTracks(genre: Genre): AppResult<List<Track>>
 }

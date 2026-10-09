@@ -42,7 +42,7 @@ data class PlaylistEntity(
         childColumns = ["playlistId"],
         onDelete = ForeignKey.CASCADE,
     )],
-    indices = [Index("playlistId")],
+    indices = [Index("playlistId"), Index("trackId")],
 )
 data class PlaylistTrackEntity(
     @PrimaryKey(autoGenerate = true) val rowId: Long = 0,
@@ -115,6 +115,32 @@ interface PlaylistDao {
     suspend fun addTrack(entity: PlaylistTrackEntity)
 
     @Transaction
+    suspend fun addIfAbsent(
+        playlistId: Long,
+        trackId: String,
+        title: String,
+        artist: String,
+        album: String?,
+        artworkUrl: String?,
+        durationMs: Long?,
+    ) {
+        if (contains(playlistId, trackId) > 0) return
+        val pos = count(playlistId)
+        addTrack(
+            PlaylistTrackEntity(
+                playlistId = playlistId,
+                trackId = trackId,
+                position = pos,
+                title = title,
+                artist = artist,
+                album = album,
+                artworkUrl = artworkUrl,
+                durationMs = durationMs,
+            ),
+        )
+    }
+
+    @Transaction
     @Query("SELECT p.*, COUNT(t.trackId) AS trackCount FROM playlists p LEFT JOIN playlist_tracks t ON t.playlistId = p.id GROUP BY p.id ORDER BY p.createdAt DESC")
     fun observePlaylists(): Flow<List<PlaylistWithCount>>
 
@@ -123,11 +149,12 @@ interface PlaylistDao {
 }
 
 @Database(
-    entities = [TrackEntity::class, PlaylistEntity::class, PlaylistTrackEntity::class],
-    version = 2,
+    entities = [TrackEntity::class, PlaylistEntity::class, PlaylistTrackEntity::class, ListeningEventEntity::class],
+    version = 3,
     exportSchema = false,
 )
 abstract class EchoWaveDb : RoomDatabase() {
     abstract fun trackDao(): TrackDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun listeningEventDao(): ListeningEventDao
 }

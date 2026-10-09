@@ -37,23 +37,26 @@ class LibraryViewModel(
     val history: StateFlow<List<Track>> = _history
 
     fun refresh() {
-        viewModelScope.launch { _history.value = repo.history(50) }
+        viewModelScope.launch {
+            runCatching { _history.value = repo.history(50) }
+        }
     }
 
     fun toggle(track: Track) {
-        viewModelScope.launch { repo.toggleFavorite(track) }
+        viewModelScope.launch { runCatching { repo.toggleFavorite(track) } }
     }
 
     fun createPlaylist(name: String) {
+        if (name.isBlank()) return
         viewModelScope.launch { runCatching { repo.createPlaylist(name) } }
     }
 
     fun deletePlaylist(id: Long) {
-        viewModelScope.launch { repo.deletePlaylist(id) }
+        viewModelScope.launch { runCatching { repo.deletePlaylist(id) } }
     }
 
     fun addToPlaylist(playlistId: Long, track: Track) {
-        viewModelScope.launch { repo.addToPlaylist(playlistId, track) }
+        viewModelScope.launch { runCatching { repo.addToPlaylist(playlistId, track) } }
     }
 
     fun playlistTracks(id: Long): StateFlow<List<Track>> =

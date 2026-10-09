@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -58,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.usecase.SearchTracksUseCase
+import com.howdy.echowave.ui.components.AppLogo
 import com.howdy.echowave.ui.components.TrackArtwork
 
 @Composable
@@ -120,6 +122,9 @@ private fun SectionChips(
     onSelect: (SearchSection) -> Unit,
     showTop: Boolean,
     showSongs: Boolean,
+    showAlbums: Boolean,
+    showArtists: Boolean,
+    showPlaylists: Boolean,
     showVideos: Boolean,
     showEpisodes: Boolean,
 ) {
@@ -127,6 +132,9 @@ private fun SectionChips(
         add(SearchSection.ALL to "All")
         if (showTop) add(SearchSection.TOP to "Top result")
         if (showSongs) add(SearchSection.SONGS to "Songs")
+        if (showAlbums) add(SearchSection.ALBUMS to "Albums")
+        if (showArtists) add(SearchSection.ARTISTS to "Artists")
+        if (showPlaylists) add(SearchSection.PLAYLISTS to "Playlists")
         if (showVideos) add(SearchSection.VIDEOS to "Videos")
         if (showEpisodes) add(SearchSection.EPISODES to "Episodes")
     }
@@ -169,16 +177,12 @@ private fun TopResultCard(
             Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            coil.compose.AsyncImage(
-                model = track.artworkUrl,
-                contentDescription = "Artwork for ${track.title}",
+            TrackArtwork(
+                url = track.artworkUrl,
+                description = "Artwork for ${track.title}",
                 modifier = Modifier.size(96.dp).clip(
                     androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
                 ),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(com.howdy.echowave.R.drawable.album),
-                error = painterResource(com.howdy.echowave.R.drawable.album),
-                fallback = painterResource(com.howdy.echowave.R.drawable.album),
             )
             Column(Modifier.weight(1f).padding(start = 16.dp)) {
                 Text(
@@ -205,21 +209,110 @@ private fun TopResultCard(
     }
 }
 
+/** Row for album/artist/playlist hits: opens instead of playing. */
+@Composable
+private fun CollectionRow(
+    title: String,
+    subtitle: String,
+    artworkUrl: String?,
+    onClick: () -> Unit,
+) {
+    Column {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick)
+                .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TrackArtwork(artworkUrl, "Artwork for $title",
+                Modifier.size(58.dp).clip(RoundedCornerShape(9.dp)))
+            Column(Modifier.weight(1f).padding(start = 13.dp)) {
+                Text(title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
+                Text(subtitle, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Open $title",
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+            }
+        }
+        androidx.compose.material3.HorizontalDivider(
+            Modifier.padding(start = 91.dp),
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+        )
+    }
+}
+
+/** Top-result card for album/artist/playlist hits. */
+@Composable
+private fun TopCollectionCard(
+    title: String,
+    subtitle: String,
+    artworkUrl: String?,
+    actionLabel: String,
+    onOpen: () -> Unit,
+) {
+    androidx.compose.material3.Card(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TrackArtwork(
+                url = artworkUrl,
+                description = "Artwork for $title",
+                modifier = Modifier.size(96.dp).clip(
+                    androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                ),
+            )
+            Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                Text(
+                    "Top result",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    title,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+            androidx.compose.material3.TextButton(onClick = onOpen) { Text(actionLabel) }
+        }
+    }
+}
+
 @Composable
 fun SearchScreen(
     onPlay: (List<Track>, Int) -> Unit,
+    onPlayRadio: ((Track) -> Unit)? = null,
     favoriteIds: Set<String> = emptySet(),
     onToggleFavorite: (Track) -> Unit = {},
     browseTracks: List<Track> = emptyList(),
+    onOpenAlbum: (com.howdy.echowave.domain.model.SearchItem.Album) -> Unit = {},
     vm: SearchViewModel = viewModel(
         factory = SearchViewModel.Factory(
-            SearchTracksUseCase((LocalContext.current.applicationContext as EchoWaveApp).container.musicRepo),
+            SearchTracksUseCase(
+                (LocalContext.current.applicationContext as EchoWaveApp).container.musicRepo,
+            ),
             (LocalContext.current.applicationContext as EchoWaveApp).container.historyRepo,
         ),
     ),
 ) {
     val ui by vm.ui.collectAsState()
-    var searchFocused by remember { mutableStateOf(false) }
+    var searchFocused by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp),
@@ -228,14 +321,7 @@ fun SearchScreen(
             Text("Search", Modifier.weight(1f),
                 style = androidx.compose.material3.MaterialTheme.typography.headlineLarge,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground)
-            Box(
-                Modifier.size(42.dp).clip(CircleShape)
-                    .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("E", color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-            }
+            AppLogo(size = 42.dp)
         }
         TextField(
             value = ui.query,
@@ -254,12 +340,21 @@ fun SearchScreen(
                 .onFocusChanged { searchFocused = it.isFocused },
         )
         when {
-            ui.loading -> CircularProgressIndicator(Modifier.padding(16.dp))
-            ui.error != null -> Column(Modifier.padding(16.dp)) {
-                Text("Couldn't load results. ${ui.error}")
-                Button(onClick = { vm.onQuery(ui.query) }) { Text("Retry") }
+            ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(12.dp))
+                    Text("Searching…", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium)
+                }
             }
-            ui.results.isEmpty() && ui.query.isBlank() -> {
+            ui.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Couldn't load results. ${ui.error}")
+                    Button(onClick = { vm.onQuery(ui.query) }) { Text("Retry") }
+                }
+            }
+            ui.results.items.isEmpty() && ui.query.isBlank() -> {
                 if (searchFocused && ui.recent.isNotEmpty()) {
                     LazyColumn(contentPadding = PaddingValues(bottom = 18.dp)) {
                         item {
@@ -270,7 +365,7 @@ fun SearchScreen(
                                 Text("Recently searched", Modifier.weight(1f),
                                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                                 androidx.compose.material3.TextButton(onClick = vm::clearRecent) {
-                                    Text("Clear", color = Color(0xFFFF5673))
+                                    Text("Clear", color = MaterialTheme.colorScheme.error)
                                 }
                             }
                             androidx.compose.material3.HorizontalDivider(
@@ -283,11 +378,14 @@ fun SearchScreen(
                                     .padding(start = 20.dp, end = 18.dp, top = 11.dp, bottom = 11.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                coil.compose.AsyncImage(
-                                    model = browseTracks.getOrNull(ui.recent.indexOf(q))?.artworkUrl,
+                                // No positional artwork mapping: recent queries have
+                                // no stable track; show a history icon instead of
+                                // a mismatched thumbnail.
+                                Icon(
+                                    Icons.Default.History,
                                     contentDescription = null,
                                     modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                                     Text(q, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -329,33 +427,109 @@ fun SearchScreen(
                     }
                 }
             }
-            ui.results.isEmpty() && ui.query.isNotBlank() -> Text(
-                "No results",
-                modifier = Modifier.padding(16.dp),
-            )
-            else -> LazyColumn {
+            ui.results.items.isEmpty() && ui.query.isNotBlank() -> Box(
+                Modifier.fillMaxSize(), contentAlignment = Alignment.Center,
+            ) {
+                Text("No results", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 18.dp),
+            ) {
                 item(key = "section-chips") {
                     SectionChips(
                         selected = ui.section,
                         onSelect = vm::setSection,
                         showTop = ui.topResult != null,
                         showSongs = ui.songs.isNotEmpty(),
+                        showAlbums = ui.albums.isNotEmpty(),
+                        showArtists = ui.artists.isNotEmpty(),
+                        showPlaylists = ui.playlists.isNotEmpty(),
                         showVideos = ui.videos.isNotEmpty(),
                         showEpisodes = ui.episodes.isNotEmpty(),
                     )
                 }
                 if (ui.shows(SearchSection.TOP)) {
-                    ui.topResult?.let { top ->
-                        // Full result set as queue: music never stops after one tap.
-                        val at = ui.results.indexOfFirst { it.id == top.id }.takeIf { it >= 0 } ?: 0
-                        item(key = "top-${top.id}") {
-                            TopResultCard(
-                                track = top,
-                                favorited = top.id in favoriteIds,
-                                onPlay = { onPlay(ui.results, at) },
-                                onToggleFavorite = { onToggleFavorite(top) },
-                            )
+                    // Top hit plays inside its own kind queue: tapping never
+                    // lands on a different item than the card shows.
+                    when (val top = ui.topResult) {
+                        is com.howdy.echowave.domain.model.SearchItem.Song -> {
+                            val at = ui.songs.indexOfFirst { it.id == top.track.id }
+                            item(key = "top-${top.track.id}") {
+                                TopResultCard(
+                                    track = top.track,
+                                    favorited = top.track.id in favoriteIds,
+                                    onPlay = {
+                                        if (onPlayRadio != null) onPlayRadio(top.track)
+                                        else if (at >= 0) onPlay(ui.songs, at)
+                                        else onPlay(listOf(top.track), 0)
+                                    },
+                                    onToggleFavorite = { onToggleFavorite(top.track) },
+                                )
+                            }
                         }
+                        is com.howdy.echowave.domain.model.SearchItem.Video -> {
+                            val at = ui.videos.indexOfFirst { it.id == top.track.id }
+                            item(key = "top-${top.track.id}") {
+                                TopResultCard(
+                                    track = top.track,
+                                    favorited = top.track.id in favoriteIds,
+                                    onPlay = {
+                                        if (at >= 0) onPlay(ui.videos, at)
+                                        else onPlay(listOf(top.track), 0)
+                                    },
+                                    onToggleFavorite = { onToggleFavorite(top.track) },
+                                )
+                            }
+                        }
+                        is com.howdy.echowave.domain.model.SearchItem.Episode -> {
+                            val at = ui.episodes.indexOfFirst { it.id == top.track.id }
+                            item(key = "top-${top.track.id}") {
+                                TopResultCard(
+                                    track = top.track,
+                                    favorited = top.track.id in favoriteIds,
+                                    onPlay = {
+                                        if (at >= 0) onPlay(ui.episodes, at)
+                                        else onPlay(listOf(top.track), 0)
+                                    },
+                                    onToggleFavorite = { onToggleFavorite(top.track) },
+                                )
+                            }
+                        }
+                        is com.howdy.echowave.domain.model.SearchItem.Album -> {
+                            item(key = "top-album-${top.id}") {
+                                TopCollectionCard(
+                                    title = top.title,
+                                    subtitle = "Album · ${top.artist}",
+                                    artworkUrl = top.artworkUrl,
+                                    actionLabel = "Open album",
+                                    onOpen = { onOpenAlbum(top) },
+                                )
+                            }
+                        }
+                        is com.howdy.echowave.domain.model.SearchItem.Artist -> {
+                            item(key = "top-artist-${top.id}") {
+                                TopCollectionCard(
+                                    title = top.name,
+                                    subtitle = "Artist",
+                                    artworkUrl = top.artworkUrl,
+                                    actionLabel = "Search artist",
+                                    onOpen = { vm.onQuery(top.name) },
+                                )
+                            }
+                        }
+                        is com.howdy.echowave.domain.model.SearchItem.Playlist -> {
+                            item(key = "top-playlist-${top.id}") {
+                                TopCollectionCard(
+                                    title = top.title,
+                                    subtitle = "Playlist · ${top.author}",
+                                    artworkUrl = top.artworkUrl,
+                                    actionLabel = "Search playlist",
+                                    onOpen = { vm.onQuery(top.title) },
+                                )
+                            }
+                        }
+                        null -> Unit
                     }
                 }
                 if (ui.shows(SearchSection.SONGS) && ui.songs.isNotEmpty()) {
@@ -367,8 +541,50 @@ fun SearchScreen(
                         ResultRow(
                             track = track,
                             favorited = track.id in favoriteIds,
-                            onPlay = { onPlay(ui.songs, i) },
+                            onPlay = {
+                                val track = ui.songs[i]
+                                if (onPlayRadio != null) onPlayRadio(track) else onPlay(ui.songs, i)
+                            },
                             onToggleFavorite = { onToggleFavorite(track) },
+                        )
+                    }
+                }
+                if (ui.shows(SearchSection.ALBUMS) && ui.albums.isNotEmpty()) {
+                    item(key = "albums-header") {
+                        SectionLabel("Albums")
+                    }
+                    items(ui.albums, key = { "album-${it.id}" }) { album ->
+                        CollectionRow(
+                            title = album.title,
+                            subtitle = "Album · ${album.artist}",
+                            artworkUrl = album.artworkUrl,
+                            onClick = { onOpenAlbum(album) },
+                        )
+                    }
+                }
+                if (ui.shows(SearchSection.ARTISTS) && ui.artists.isNotEmpty()) {
+                    item(key = "artists-header") {
+                        SectionLabel("Artists")
+                    }
+                    items(ui.artists, key = { "artist-${it.id}" }) { artist ->
+                        CollectionRow(
+                            title = artist.name,
+                            subtitle = "Artist",
+                            artworkUrl = artist.artworkUrl,
+                            onClick = { vm.onQuery(artist.name) },
+                        )
+                    }
+                }
+                if (ui.shows(SearchSection.PLAYLISTS) && ui.playlists.isNotEmpty()) {
+                    item(key = "playlists-header") {
+                        SectionLabel("Playlists")
+                    }
+                    items(ui.playlists, key = { "playlist-${it.id}" }) { playlist ->
+                        CollectionRow(
+                            title = playlist.title,
+                            subtitle = "Playlist · ${playlist.author}",
+                            artworkUrl = playlist.artworkUrl,
+                            onClick = { vm.onQuery(playlist.title) },
                         )
                     }
                 }

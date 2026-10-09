@@ -50,4 +50,11 @@ class SettingsRepositoryTest {
         assertEquals(false, repository.greetingEnabled.first())
         assertEquals("Hindi, Bhojpuri, Indie", repository.musicPreferences.first())
     }
+
+    @Test fun `onboarding flag defaults false then persists true`() = runBlocking {
+        val repository = repo()
+        assertEquals(false, repository.onboardingCompleted.first())
+        repository.setOnboardingCompleted(true)
+        assertEquals(true, repository.onboardingCompleted.first())
+    }
 }

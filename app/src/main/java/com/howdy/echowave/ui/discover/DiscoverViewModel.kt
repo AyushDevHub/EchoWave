@@ -4,9 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.howdy.echowave.core.common.AppResult
-import com.howdy.echowave.domain.model.Album
-import com.howdy.echowave.domain.model.Genre
-import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.repository.DiscoveryRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,11 +12,7 @@ import kotlinx.coroutines.launch
 
 data class DiscoverUiState(
     val loadingCharts: Boolean = false,
-    val loadingAlbums: Boolean = false,
-    val loadingMoods: Boolean = false,
-    val charts: List<Track> = emptyList(),
-    val albums: List<Album> = emptyList(),
-    val moods: List<Genre> = emptyList(),
+    val charts: List<com.howdy.echowave.domain.model.Track> = emptyList(),
     val error: String? = null,
 )
 
@@ -33,28 +26,20 @@ class DiscoverViewModel(
     fun refresh() {
         job?.cancel()
         job = viewModelScope.launch {
-            _ui.value = _ui.value.copy(
-                loadingCharts = true, loadingAlbums = true, loadingMoods = true,
-                error = null,
-            )
-            val charts = repo.charts()
-            _ui.value = _ui.value.copy(
-                loadingCharts = false,
-                charts = (charts as? AppResult.Ok)?.value ?: emptyList(),
-                error = (charts as? AppResult.Err)?.message,
-            )
-            val albums = repo.newReleases()
-            _ui.value = _ui.value.copy(
-                loadingAlbums = false,
-                albums = (albums as? AppResult.Ok)?.value ?: emptyList(),
-                error = _ui.value.error ?: (albums as? AppResult.Err)?.message,
-            )
-            val moods = repo.moods()
-            _ui.value = _ui.value.copy(
-                loadingMoods = false,
-                moods = (moods as? AppResult.Ok)?.value ?: emptyList(),
-                error = _ui.value.error ?: (moods as? AppResult.Err)?.message,
-            )
+            _ui.value = _ui.value.copy(loadingCharts = true, error = null)
+            try {
+                val charts = repo.charts()
+                _ui.value = _ui.value.copy(
+                    loadingCharts = false,
+                    charts = (charts as? AppResult.Ok)?.value ?: _ui.value.charts,
+                    error = (charts as? AppResult.Err)?.message,
+                )
+            } catch (e: Exception) {
+                _ui.value = _ui.value.copy(
+                    loadingCharts = false,
+                    error = e.message ?: "Charts could not be loaded.",
+                )
+            }
         }
     }
 

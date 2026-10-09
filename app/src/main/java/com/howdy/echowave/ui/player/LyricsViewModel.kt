@@ -31,13 +31,18 @@ class LyricsViewModel(
         loadedFor = track.id
         job?.cancel()
         job = viewModelScope.launch {
-            _ui.value = LyricsUiState(loading = true)
+            // Keep previous lines while refreshing to avoid flicker.
+            val previous = _ui.value.lines
+            _ui.value = LyricsUiState(loading = true, lines = previous)
             try {
                 _ui.value = LyricsUiState(lines = repo.lyrics(track, forceRefresh))
+                if (_ui.value.lines == null) {
+                    _ui.value = LyricsUiState(lines = previous, error = "Lyrics unavailable")
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                _ui.value = LyricsUiState(error = error.message ?: "Lyrics could not be loaded.")
+                _ui.value = LyricsUiState(lines = previous, error = error.message ?: "Lyrics could not be loaded.")
             }
         }
     }

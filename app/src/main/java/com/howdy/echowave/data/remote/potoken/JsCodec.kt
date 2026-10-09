@@ -19,6 +19,7 @@ object JsCodec {
     /** Raw `jnn/Create` challenge -> embeddable JS object literal. */
     fun parseChallengeData(raw: String): String {
         val scrambled = json.parseToJsonElement(raw).jsonArray
+        if (scrambled.isEmpty()) throw PoTokenException("Empty challenge")
         val challengeData =
             if (scrambled.size > 1 && scrambled[1].jsonPrimitive.isString) {
                 val descrambled = descramble(scrambled[1].jsonPrimitive.content)
@@ -26,7 +27,11 @@ object JsCodec {
             } else {
                 scrambled[0].jsonArray
             }
-        fun idx(i: Int) = challengeData[i].jsonPrimitive.content
+        if (challengeData.size <= 7) throw PoTokenException("Truncated challenge")
+        fun idx(i: Int): String {
+            if (i !in challengeData.indices) throw PoTokenException("Truncated challenge field $i")
+            return challengeData[i].jsonPrimitive.content
+        }
         val safeScript = challengeData[1].takeIf { it !is JsonNull }
             ?.jsonArray?.firstOrNull { it.jsonPrimitive.isString }
             ?: JsonNull
@@ -56,6 +61,7 @@ object JsCodec {
     /** Raw `jnn/GenerateIT` response -> (JS Uint8Array literal, expiry seconds). */
     fun parseIntegrityTokenData(raw: String): Pair<String, Long> {
         val arr = json.parseToJsonElement(raw).jsonArray
+        if (arr.size < 2) throw PoTokenException("Truncated integrity token")
         return base64ToU8(arr[0].jsonPrimitive.content) to arr[1].jsonPrimitive.long
     }
 
@@ -66,7 +72,10 @@ object JsCodec {
     fun u8ToBase64(commaSeparated: String): String {
         val bytes = commaSeparated.split(",")
             .filter { it.isNotBlank() }
-            .map { it.toUByte().toByte() }
+            .map {
+                it.trim().toUByteOrNull()?.toByte()
+                    ?: throw PoTokenException("Malformed token bytes")
+            }
             .toByteArray()
         return java.util.Base64.getUrlEncoder().encodeToString(bytes)
     }

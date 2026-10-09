@@ -6,7 +6,6 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 
 /**
  * Binds UI process to [PlaybackService]. Owned by MainActivity,
@@ -28,10 +27,12 @@ class PlaybackSessionConnector(
                     try {
                         controller.attach(f.get())
                     } catch (_: Exception) {
-                        // Service unavailable — controller stays in state-only mode.
+                        // Service unavailable — allow retry and stay state-only.
+                        future?.let { runCatching { MediaController.releaseFuture(it) } }
+                        future = null
                     }
                 },
-                MoreExecutors.directExecutor(),
+                { runnable -> android.os.Handler(android.os.Looper.getMainLooper()).post(runnable) },
             )
         }
     }

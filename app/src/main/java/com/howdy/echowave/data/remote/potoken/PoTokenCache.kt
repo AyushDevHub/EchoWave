@@ -24,7 +24,12 @@ class PoTokenCache(
     fun put(sessionId: String, streamingPot: String, expiresInSec: Long) {
         this.sessionId = sessionId
         this.streamingPot = streamingPot
-        this.expiresAtMs = clockMs() + expiresInSec * 1000L - expiryMarginMs
+        val now = clockMs()
+        val computed = now + expiresInSec * 1000L - expiryMarginMs
+        // If server expiry minus margin is already past (tiny expiry with
+        // large margin), floor to a short fresh window to avoid mint loops.
+        // Honest small expiries with zero margin still expire on time.
+        this.expiresAtMs = if (computed <= now) now + MIN_FRESH_MS else computed
     }
 
     @Synchronized
@@ -32,5 +37,10 @@ class PoTokenCache(
         sessionId = null
         streamingPot = null
         expiresAtMs = 0L
+    }
+
+    companion object {
+        /** Floor when computed expiry is already past: avoids mint loops. */
+        const val MIN_FRESH_MS = 60_000L
     }
 }

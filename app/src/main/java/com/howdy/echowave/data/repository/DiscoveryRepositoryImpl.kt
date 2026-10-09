@@ -29,7 +29,7 @@ class DiscoveryRepositoryImpl(
                 body = browseBody(CHARTS_ID, CHARTS_PARAMS, visitors.current()),
             )
             visitors.offer(extractVisitorData(root))
-            AppResult.Ok(parseSearchResponse(root, limit))
+            AppResult.Ok(parseSearchResponse(root, limit).tracks)
         } catch (e: Exception) {
             AppResult.Err(EchoWaveError.Network(e.message ?: "charts failed").userMessage(), e)
         }
@@ -49,15 +49,15 @@ class DiscoveryRepositoryImpl(
         }
     }
 
-    override suspend fun albumTracks(albumId: String): AppResult<List<Track>> {
+    override suspend fun albumTracks(albumId: String, params: String?): AppResult<List<Track>> {
         return try {
             val root = api.browse(
                 clientId = INNERTUBE_CLIENT_ID,
                 clientVersion = INNERTUBE_CLIENT_VERSION,
-                body = browseBody(albumId, null, visitors.current()),
+                body = browseBody(albumId, params, visitors.current()),
             )
             visitors.offer(extractVisitorData(root))
-            AppResult.Ok(parseSearchResponse(root, 100))
+            AppResult.Ok(parseSearchResponse(root, 100).tracks)
         } catch (e: Exception) {
             AppResult.Err(EchoWaveError.Network(e.message ?: "album failed").userMessage(), e)
         }
@@ -85,7 +85,7 @@ class DiscoveryRepositoryImpl(
                 body = browseBody(genre.id, genre.params, visitors.current()),
             )
             visitors.offer(extractVisitorData(root))
-            AppResult.Ok(parseSearchResponse(root, 100))
+            AppResult.Ok(parseSearchResponse(root, 100).tracks)
         } catch (e: Exception) {
             AppResult.Err(EchoWaveError.Network(e.message ?: "mood failed").userMessage(), e)
         }

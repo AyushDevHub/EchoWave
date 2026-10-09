@@ -9,11 +9,12 @@ package com.howdy.echowave.playback
  * with no owner installed, the service falls back to player default.
  */
 object PlaybackRouter {
-    var onNext: (() -> Unit)? = null
-    var onPrevious: (() -> Unit)? = null
-    var canNext: () -> Boolean = { false }
-    var canPrevious: () -> Boolean = { false }
+    @Volatile var onNext: (() -> Unit)? = null
+    @Volatile var onPrevious: (() -> Unit)? = null
+    @Volatile var canNext: () -> Boolean = { false }
+    @Volatile var canPrevious: () -> Boolean = { false }
 
+    @Synchronized
     fun install(
         next: () -> Unit,
         previous: () -> Unit,
@@ -26,6 +27,7 @@ object PlaybackRouter {
         canPrevious = hasPrevious
     }
 
+    @Synchronized
     fun clear() {
         onNext = null
         onPrevious = null

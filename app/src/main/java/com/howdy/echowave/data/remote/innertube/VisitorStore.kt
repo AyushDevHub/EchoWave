@@ -12,13 +12,18 @@ class VisitorStore(
     private val load: () -> String?,
     private val saveFn: (String) -> Unit,
 ) {
-    fun current(): String? = load()
+    private val lock = Any()
+
+    fun current(): String? = synchronized(lock) { load() }
 
     /** Returns true when a genuinely new id arrived (callers reset token state). */
     fun offer(id: String?): Boolean {
-        if (id.isNullOrBlank() || id == load()) return false
-        saveFn(id)
-        return true
+        if (id.isNullOrBlank()) return false
+        synchronized(lock) {
+            if (id == load()) return false
+            saveFn(id)
+            return true
+        }
     }
 
     companion object {
@@ -32,7 +37,11 @@ class VisitorStore(
 
         fun inMemory(): VisitorStore {
             var box: String? = null
-            return VisitorStore(load = { box }, saveFn = { box = it })
+            val lock = Any()
+            return VisitorStore(
+                load = { synchronized(lock) { box } },
+                saveFn = { synchronized(lock) { box = it } },
+            )
         }
     }
 }

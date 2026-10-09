@@ -3,6 +3,7 @@ package com.howdy.echowave.data.remote.lyrics
 import com.howdy.echowave.data.remote.lyrics.LrcLine
 import com.howdy.echowave.data.remote.lyrics.LyricsRepository
 import com.howdy.echowave.data.remote.lyrics.currentLrcIndex
+import com.howdy.echowave.data.remote.lyrics.normalizeLyricTiming
 import com.howdy.echowave.data.remote.lyrics.parseLrc
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -50,6 +51,32 @@ class LyricsTest {
         assertEquals(-1, currentLrcWordIndex(emptyList(), 5000))
     }
 
+    @Test fun `corrects lyrics whose timestamps were scaled twice`() {
+        val lines = listOf(
+            LrcLine(10_000_000, "one", listOf(LrcWord(10_500_000, "one"))),
+            LrcLine(40_000_000, "two", listOf(LrcWord(40_500_000, "two"))),
+        )
+
+        assertEquals(
+            listOf(
+                LrcLine(10_000, "one", listOf(LrcWord(10_500, "one"))),
+                LrcLine(40_000, "two", listOf(LrcWord(40_500, "two"))),
+            ),
+            normalizeLyricTiming(lines, 200_000L),
+        )
+    }
+
+    @Test fun `corrects doubled timestamps without track duration and infers line start from words`() {
+        val lines = listOf(
+            LrcLine(0L, "hello", listOf(LrcWord(12_000_000L, "hello"))),
+        )
+
+        assertEquals(
+            listOf(LrcLine(12_000L, "hello", listOf(LrcWord(12_000L, "hello")))),
+            normalizeLyricTiming(lines, null),
+        )
+    }
+
     @Test fun `word-sync inline tags strip to clean lines`() {
         val lines = parseLrc("[00:01.00]<00:01.00>Hel <00:01.50>lo world")
         assertEquals(1, lines.size)
@@ -62,13 +89,13 @@ class LyricsTest {
         val items = listOf(
             YouLyPlusItem(
                 text = "Hello world",
-                time = 1000.0,
+                time = 1.0,
                 syllabus = listOf(
-                    YouLyPlusSyllable("Hello ", 1000.0),
-                    YouLyPlusSyllable("world", 1500.0),
+                    YouLyPlusSyllable("Hello ", 1.0),
+                    YouLyPlusSyllable("world", 1.5),
                 ),
             ),
-            YouLyPlusItem(text = "Plain line", time = 5000.0),
+            YouLyPlusItem(text = "Plain line", time = 5.0),
         )
         val lrc = with(YouLyPlus) { items.convertToLrc() }!!
         val lines = parseLrc(lrc)

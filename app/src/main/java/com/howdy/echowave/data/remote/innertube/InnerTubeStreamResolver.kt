@@ -48,10 +48,11 @@ class InnerTubeStreamResolver(
             PlayerAttempt("tv", TV_CLIENT_ID, TV_CLIENT_VERSION, playerBodyTv(trackId, visitor)),
         ).filter { it.label !in skipped }
         for (attempt in tokenless) {
-            val parsed = playerAttempt(trackId, attempt, skipPot = true)
+            val parsed = playerAttempt(trackId, attempt)
             val info = parsed.getOrNull()
             if (info != null && probeAccept(trackId, attempt.label, info)) {
                 registry.record(info.url, trackId, attempt.label)
+                potJob.cancel()
                 return@coroutineScope AppResult.Ok(info)
             }
             parsed.exceptionOrNull()?.let { reasons += "${attempt.label}:${it.message}" }
@@ -65,7 +66,7 @@ class InnerTubeStreamResolver(
             PlayerAttempt("web", INNERTUBE_CLIENT_ID, INNERTUBE_CLIENT_VERSION, playerBody(trackId, token?.playerRequestPoToken, visitor)),
         ).filter { it.label !in registry.excludedFor(trackId) }
         for (attempt in potted) {
-            val parsed = playerAttempt(trackId, attempt, skipPot = false)
+            val parsed = playerAttempt(trackId, attempt)
             val info = parsed.getOrNull()
             if (info != null && probeAccept(trackId, attempt.label, info)) {
                 val withPot = attachPoToken(
@@ -77,6 +78,8 @@ class InnerTubeStreamResolver(
             }
             parsed.exceptionOrNull()?.let { reasons += "${attempt.label}:${it.message}" }
         }
+        // Cancel mint if still running (all paths failed but job may linger).
+        potJob.cancel()
         AppResult.Err(
             EchoWaveError.StreamUnavailable(trackId).userMessage() + " (${reasons.joinToString(" | ")})",
         )
@@ -95,7 +98,6 @@ class InnerTubeStreamResolver(
     private suspend fun playerAttempt(
         trackId: String,
         attempt: PlayerAttempt,
-        skipPot: Boolean,
     ): Result<StreamInfo> {
         return try {
             val root = api.player(
@@ -115,9 +117,9 @@ class InnerTubeStreamResolver(
                     Result.failure(Exception(p.reason))
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             android.util.Log.e("EchoWaveResolve", "innerTube ${attempt.label} network fail")
-            Result.failure(Exception(EchoWaveError.Network("resolve failed").userMessage()))
+            Result.failure(Exception(EchoWaveError.Network("resolve failed").userMessage(), e))
         }
     }
 
