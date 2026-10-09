@@ -23,6 +23,6 @@ These projects carry their own license terms and notices. Consult the exact reso
 - Bundled fonts in `app/src/main/res/font/`:
   - **Outfit** (`outfit.ttf`): Copyright (c) 2021 The Outfit Project Authors. Licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
   - **Plus Jakarta Sans** (`plus_jakarta_sans.ttf`): Copyright (c) 2020 The Plus Jakarta Sans Project Authors. Licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
-- No music or remote artwork is bundled in the APK.
+- The source tree contains three MP3 resources (`idiots.mp3`, `desi_girl.mp3`, and `chamak_challo.mp3`) under `app/src/main/res/raw/`; no code references were found. Their provenance and license/permission are unknown, so the content-rights review must establish whether they are included in release artifacts and whether distribution is authorized. Do not describe the project as containing no bundled audio. Remote artwork is loaded at runtime and is not a bundled asset.
 
 The `innertubex` coordinate in the version catalog is inactive and is not declared as an app dependency. Recheck the Gradle dependency graph when dependencies change.

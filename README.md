@@ -24,7 +24,7 @@ The app does not host music. Users are responsible for their own use of the app 
 | --- | --- |
 | Onboarding | First-run setup for listener name, genre picks, and artist preferences |
 | Discovery | Search with typed filters, album detail track lists, browse collections, moods and genres, recent searches, and seed-based radio autoplay |
-| Music DNA | Private on-device listening taste profile, day-part awareness, and multi-factor radio recommendations |
+| Music DNA | On-device listening taste profile, day-part awareness, and multi-factor radio recommendations based on the current seed, recent listening, favorites, and library history |
 | Playback | Queue, seek, previous/next, shuffle, repeat, and automatic advance |
 | Lyrics | Lyrics lookup and animated word-timed display when timing data is available |
 | Library | Local favorites, playlists, and listening history |
@@ -32,6 +32,12 @@ The app does not host music. Users are responsible for their own use of the app 
 | Android integration | Media session, notification, lock-screen, and background playback controls |
 
 Provider behavior can change independently of EchoWave. Some fallback resolvers are placeholders and should not be presented as working providers.
+
+## Credits and provider status
+
+EchoWave adapts selected InnerTube stream and PO-token approaches from [Echo-Music](https://github.com/EchoMusicApp/Echo-Music); the vendored asset and adapted areas are listed in [CREDITS.md](CREDITS.md). The project also credits its text-matching code port and other reference-only projects there. EchoWave's recommendation ranking and on-device listening profile are project code; local listening events and the profile are not sent with radio requests. See [third-party notices](THIRD_PARTY_NOTICES.md) for dependencies and [privacy notes](docs/PRIVACY.md) for data handling.
+
+The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Three MP3 files are also included in the Android resources; their origin and distribution rights are unknown. The next APK release remains blocked pending the provider and content-rights review described in the [risk register](docs/RISK_REGISTER.md).
 
 ## Build from source
 

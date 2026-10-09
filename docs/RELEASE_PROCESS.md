@@ -4,7 +4,7 @@ This document records how the public v1.0.0 APK was assembled and what to do for
 
 ## Before the next release
 
-1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). YouTube's [published API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) say undocumented APIs must not be used without express permission. The register records undocumented YouTube/YouTube Music access and uncleared rights as critical risks, and requires written permission or a permitted replacement before further distribution. A GitHub release does not grant rights or provider authorization. As of 2026-10-10, this release gate remains open.
+1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). YouTube's [published API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) say undocumented APIs must not be used without express permission. Three MP3 resources are present in the debug APK, have no source references, and have no recorded provenance or license. Establish their rights and remove them from release artifacts unless authorized. The register also records undocumented YouTube/YouTube Music access and uncleared rights as critical risks; obtain written permission or replace the integration with permitted sources before further distribution. A GitHub release does not grant rights or provider authorization. As of 2026-10-10, this release gate remains open.
 2. Update `versionCode` and `versionName` in `app/build.gradle.kts`; choose a new release tag, notes file, and APK asset name.
 3. Review the open issues and risk register. Update the privacy notice, credits, notices, and changelog for all behavior/dependency/source changes.
 4. Run `test`, `lint`, `assembleRelease`, and `bundleRelease`. Review every lint warning and build output.
@@ -16,6 +16,7 @@ This document records how the public v1.0.0 APK was assembled and what to do for
 
 - Version set to 1.0.1 / versionCode 2 so an eventual signed update can upgrade v1.0.0.
 - Lyrics track-change and playback checks were run on the Moto G96 5G using a debug build; see [TEST_PLAN.md](TEST_PLAN.md). This is not a full release-device regression.
+- The current debug APK was confirmed to package `idiots.mp3`, `desi_girl.mp3`, and `chamak_challo.mp3`; their origin and distribution rights are unknown. No source references were found.
 - Do not create or publish a `v1.0.1` GitHub release until the critical provider authorization and content-rights gate above is resolved. The candidate version and local build do not imply approval to distribute it.
 
 ## Signing key

@@ -39,6 +39,10 @@ Direct runtime, build, and test dependencies are summarized in [THIRD_PARTY_NOTI
 - Apple Music / Echo-Music are interaction inspirations only; all player and lyric UI here is original code, no copied assets.
 - Spotify, Apple Music, YouTube Music, LastWave, and Echo Music were discussed as behavioral references for music discovery; EchoWave does not include their recommendation code, models, catalog, or assets.
 
+## Bundled audio assets requiring provenance review
+
+The repository contains `app/src/main/res/raw/idiots.mp3`, `desi_girl.mp3`, and `chamak_challo.mp3`. A source search found no references to these resources, but they are present in the Android resource tree and may be packaged by builds. Their origin, copyright owner, and license/permission are not recorded. Do not claim these files are cleared or redistribute an APK containing them until their provenance and rights are established; remove them from the app/repository if they are not authorized and needed.
+
 ## Trademarks
 
 YouTube, YouTube Music, Google, Spotify, Apple, and other service names are trademarks of their respective owners. EchoWave is an independent project and is not affiliated with or endorsed by these services.

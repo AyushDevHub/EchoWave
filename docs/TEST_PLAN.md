@@ -51,6 +51,8 @@ The phone also reported an unrelated Bluetooth media session in `ERROR` state (â
 
 Automated checks for the 1.0.1 candidate source completed on 2026-10-10: `test lint assembleRelease bundleRelease` succeeded. Lint reported 49 warnings and 2 hints with no errors; review the generated `app/build/reports/lint-results-debug.html` before treating lint as clean. The signed release APK and AAB were signature-verified locally. Release-mode on-device behavior remains unverified.
 
+The current source checkout was rechecked on 2026-10-10 with `test lint assembleDebug`. The forced `test --rerun-tasks` execution passed 159 tests across 31 test suites with no failures or errors. Lint completed with 0 errors, 49 warnings, and 2 hints; the warnings remain to be reviewed. The build emitted Kotlin/JDK target fallback warnings (the installed JDK target is newer than Kotlin's supported target); these are build-toolchain warnings, not proof that runtime behavior is correct. The debug APK installed on the connected Moto G96 5G and its launcher activity came to the foreground. This was a launch smoke check only; it does not replace the release-mode device regression matrix or verify network playback.
+
 ## Evidence recorded for v1.0.0
 
 - `test lint assembleRelease bundleRelease` succeeded in the local development environment.

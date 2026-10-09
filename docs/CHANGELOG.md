@@ -2,11 +2,14 @@
 
 User-visible changes are listed here. Internal maintenance and exhaustive file changes are recorded in Git history.
 
-## Unreleased
+## 1.0.1 (candidate; not released)
 
-- Search song taps now start seed-based radio autoplay instead of queueing the remaining search results ahead of recommendations.
-- Recommendation ranking now uses seed style/language, recent skips and plays, the local taste profile, favorites, and recent library history; local taste data stays on device.
-- Reduced the playback rebuffer threshold after seeks and documented YouTube/YouTube Music data flows, local recommendation signals, caching, and the unofficial provider status.
+- Expanded discovery with typed search filters, album detail track lists, browse collections, and seed-based radio autoplay from a selected song.
+- Added a private, on-device listening profile and recommendations informed by the seed, recent plays and skips, favorites, and library history. Listening events are stored locally; the profile and history are not sent with radio requests.
+- Improved track-change lyrics state and lyric timing, adjusted seek rebuffer behavior, and expanded provider, privacy, dependency, and release documentation.
+- Added direct attribution for the selected Echo-Music donor implementation areas and documented which recommendation work is EchoWave code.
+
+This candidate has not been published. See [release status](RELEASE_PROCESS.md) for the open provider authorization and content-rights release gate.
 
 ## 1.0.0 — 2026-10-07
 
