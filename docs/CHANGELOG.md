@@ -9,6 +9,7 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 - Improved track-change lyrics state and lyric timing, adjusted seek rebuffer behavior, and expanded provider, privacy, dependency, and release documentation.
 - Added direct attribution for the selected Echo-Music donor implementation areas and documented which recommendation work is EchoWave code.
 - Removed three unused MP3 resources with undocumented provenance from the current source tree; earlier Git history still contains them.
+- Added a compact Home-screen update chip that checks GitHub Releases and opens the release page when a newer APK is available.
 
 This candidate has not been published. See [release status](RELEASE_PROCESS.md) for the open provider authorization and content-rights release gate.
 

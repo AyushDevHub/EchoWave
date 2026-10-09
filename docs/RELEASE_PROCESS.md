@@ -15,6 +15,7 @@ This document records how the public v1.0.0 APK was assembled and what to do for
 ## v1.0.1 candidate status (2026-10-10)
 
 - Version set to 1.0.1 / versionCode 2 so an eventual signed update can upgrade v1.0.0.
+- The Home screen now checks GitHub's latest release metadata and displays a compact update chip when a newer APK is available. The first release containing this checker still needs to be announced manually; future availability is surfaced while the app is open.
 - Lyrics track-change and playback checks were run on the Moto G96 5G using a debug build; see [TEST_PLAN.md](TEST_PLAN.md). This is not a full release-device regression.
 - The earlier debug APK packaged `idiots.mp3`, `desi_girl.mp3`, and `chamak_challo.mp3`; the files were unused and have now been removed from the source tree. Rebuild and inspect the candidate APK before any distribution. Their origin and distribution rights remain unknown, and earlier Git revisions retain them.
 - A signed 1.0.1 release APK was rebuilt locally on 2026-10-10. Its signature verifies and matches the v1.0.0 certificate; the APK archive contains none of the three removed MP3 files. It has not been tested on-device or published. Current unit/lint/build evidence is recorded in [TEST_PLAN.md](TEST_PLAN.md).

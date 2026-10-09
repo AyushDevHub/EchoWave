@@ -10,7 +10,7 @@ EchoWave is an Android music player built with Kotlin, Jetpack Compose, and Andr
 
 The current public APK is on the [GitHub Releases page](https://github.com/AyushDevHub/EchoWave/releases/latest). Release notes include installation information and a SHA-256 checksum. EchoWave requires Android 8.0 (API 26) or newer.
 
-Updates are manual: EchoWave has no in-app update checker or notification. Maintainers need to announce each release; users can then download the APK from Releases and open it to install. Installing over the existing app preserves its data when the APK uses the same release signing key. Do not uninstall the app to update.
+The home screen checks GitHub Releases for a newer APK while the app is open and shows a small update chip when one is available. Tap it to open the release page, then download and install the APK manually. EchoWave does not install updates or send notifications in the background, so maintainers should still announce releases. Installing over the existing app preserves its data when the APK uses the same release signing key. Do not uninstall the app to update.
 
 ## Important provider and distribution notice
 

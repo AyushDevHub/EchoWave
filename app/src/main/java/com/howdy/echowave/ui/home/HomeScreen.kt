@@ -19,12 +19,18 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,9 +45,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.ui.components.AppLogo
 import com.howdy.echowave.ui.components.TrackArtwork
+import com.howdy.echowave.ui.update.UpdateStatus
+import com.howdy.echowave.ui.update.UpdateViewModel
 import com.howdy.echowave.ui.theme.DisplayHeadline
 import com.howdy.echowave.ui.theme.capsLabel
 
@@ -62,7 +72,12 @@ fun HomeScreen(
     onPlay: (List<Track>, Int) -> Unit,
     onOpenPlayer: () -> Unit = {},
     onSeeAllCharts: () -> Unit = {},
+    updateViewModel: UpdateViewModel = viewModel(),
 ) {
+    val updateStatus by updateViewModel.status.collectAsState()
+    val uriHandler = LocalUriHandler.current
+    LaunchedEffect(updateViewModel) { updateViewModel.check() }
+
     var filter by rememberSaveable { mutableStateOf(HomeFilter.FOR_YOU) }
     val mix = remember(recent, favorites) {
         (favorites + recent).distinctBy { it.id }
@@ -117,6 +132,11 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
+                ReleaseUpdateChip(
+                    status = updateStatus,
+                    onRetry = { updateViewModel.check(force = true) },
+                    onOpenRelease = { uri -> uriHandler.openUri(uri) },
+                )
                 AppLogo(size = 46.dp)
             }
         }
@@ -258,6 +278,75 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReleaseUpdateChip(
+    status: UpdateStatus,
+    onRetry: () -> Unit,
+    onOpenRelease: (String) -> Unit,
+) {
+    val isAvailable = status is UpdateStatus.Available
+    val isFailed = status is UpdateStatus.Failed
+    if (status is UpdateStatus.Current) return
+
+    val label = when (status) {
+        UpdateStatus.Checking -> "Checking"
+        UpdateStatus.Current -> return
+        UpdateStatus.Failed -> "Retry"
+        is UpdateStatus.Available -> "Update ${status.release.version}"
+    }
+    val chipColor = if (isAvailable) MaterialTheme.colorScheme.primaryContainer
+    else MaterialTheme.colorScheme.surfaceVariant
+    val foreground = if (isAvailable) MaterialTheme.colorScheme.onPrimaryContainer
+    else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        onClick = {
+            when (status) {
+                UpdateStatus.Failed -> onRetry()
+                is UpdateStatus.Available -> onOpenRelease(status.release.releasePageUrl)
+                else -> Unit
+            }
+        },
+        enabled = isAvailable || isFailed,
+        shape = CircleShape,
+        color = chipColor,
+        contentColor = foreground,
+        border = BorderStroke(1.dp, foreground.copy(alpha = 0.18f)),
+        modifier = Modifier.padding(end = 10.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            when (status) {
+                UpdateStatus.Checking -> CircularProgressIndicator(
+                    modifier = Modifier.size(13.dp),
+                    strokeWidth = 1.5.dp,
+                    color = foreground,
+                )
+                UpdateStatus.Current -> Unit
+                UpdateStatus.Failed -> androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                )
+                is UpdateStatus.Available -> androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

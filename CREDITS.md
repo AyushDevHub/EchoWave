@@ -18,6 +18,7 @@ Review source-file headers and the GPL-3.0 license when modifying or redistribut
 - The app currently calls unofficial YouTube/YouTube Music InnerTube endpoints. This is not an endorsement or authorization. See [InnerTube notes](docs/INNER_TUBE_NOTES.md).
 - `InnerTubeRadioCandidateSource` consumes candidate metadata from the existing undocumented YouTube Music `/next` flow. Candidate filtering, EchoWave's local feature extraction/scoring, queue behavior, and on-device DNA aggregation are EchoWave implementations; no YouTube recommendation-model code or weights are included. The provider integration is not documented as authorized.
 - Lyrics lookup uses LyricsPlus-compatible services and LRCLIB. [YouLyPlus](https://github.com/ibratabian17/YouLyPlus) and the [LyricsPlus backend](https://github.com/ibratabian17/lyricsplus) are credited as the ecosystem/format reference. EchoWave does not bundle their extension code. Mirrors are independently operated.
+- A compact update chip reads public release metadata from GitHub's REST API. No third-party updater library or APK installer code is used; users open the release page and install the APK themselves.
 - Artwork and music metadata are loaded from remote providers; no remote tracks are included as bundled assets.
 
 ## Reference-only projects
