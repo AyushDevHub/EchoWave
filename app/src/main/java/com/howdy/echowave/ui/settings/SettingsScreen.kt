@@ -19,13 +19,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -323,14 +323,14 @@ fun AboutSettingsScreen(onBack: () -> Unit = {}) {
                     Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 12.dp))
-                    AboutLink("Project on GitHub", Icons.Default.OpenInNew) {
+                    AboutLink("Project on GitHub", Icons.AutoMirrored.Filled.OpenInNew) {
                         uri.openUri(SettingsRepository.GITHUB_URL)
                     }
                     AboutLink("GPL-3.0 license", Icons.Default.ChevronRight) {
                         uri.openUri("https://www.gnu.org/licenses/gpl-3.0.en.html")
                     }
                     AboutLink("Credits & acknowledgements", Icons.Default.ChevronRight) {
-                        uri.openUri(SettingsRepository.GITHUB_URL)
+                        uri.openUri(SettingsRepository.CREDITS_URL)
                     }
                 }
             }

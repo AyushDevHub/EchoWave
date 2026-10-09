@@ -53,9 +53,20 @@ class Media3PlaybackController(
     private var activePrefetchSeedId: String? = null
     private var rerunPrefetchForNewSeed = false
 
-    /** Active DNA listen session: track + wall-clock start. */
+    /** Active DNA listen session: track + active listening time tracking. */
     private var dnaTrack: Track? = null
-    private var dnaStartedAt: Long = 0L
+    private var dnaAccumulatedListenMs: Long = 0L
+    private var dnaLastPlayingStartedAt: Long? = null
+
+    private fun dnaCurrentListenMs(): Long {
+        val active = dnaLastPlayingStartedAt?.let { (dnaClock() - it).coerceAtLeast(0L) } ?: 0L
+        return dnaAccumulatedListenMs + active
+    }
+
+    private fun resetDnaListenClock(nowPlaying: Boolean) {
+        dnaAccumulatedListenMs = 0L
+        dnaLastPlayingStartedAt = if (nowPlaying) dnaClock() else null
+    }
 
     companion object {
         private const val RESTART_THRESHOLD_MS = 3000L
@@ -67,7 +78,18 @@ class Media3PlaybackController(
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             logd("onIsPlayingChanged=$isPlaying")
             _state.value = _state.value.copy(isPlaying = isPlaying, isBuffering = false)
-            if (isPlaying) startPositionPolling() else stopPositionPolling()
+            if (isPlaying) {
+                if (dnaLastPlayingStartedAt == null && dnaTrack != null) {
+                    dnaLastPlayingStartedAt = dnaClock()
+                }
+                startPositionPolling()
+            } else {
+                dnaLastPlayingStartedAt?.let {
+                    dnaAccumulatedListenMs += (dnaClock() - it).coerceAtLeast(0L)
+                }
+                dnaLastPlayingStartedAt = null
+                stopPositionPolling()
+            }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -529,20 +551,20 @@ class Media3PlaybackController(
      * Fire-and-forget on IO; never blocks playback or calls AI.
      */
     private fun beginDnaSession(track: Track) {
+        val isCurrentlyPlaying = controller?.isPlaying == true || _state.value.isPlaying
         val recorder = dna ?: run {
             dnaTrack = track
-            dnaStartedAt = dnaClock()
+            resetDnaListenClock(isCurrentlyPlaying)
             return
         }
         val now = dnaClock()
+        val listenMs = dnaCurrentListenMs()
         dnaTrack?.let { prev ->
             if (prev.id != track.id) {
-                val listenMs = (now - dnaStartedAt).coerceAtLeast(0L)
                 recordDnaSkip(recorder, prev, listenMs)
             } else {
                 // Same track replayed (repeat-one or re-tap): count a repeat
                 // when the previous stint was substantial.
-                val listenMs = (now - dnaStartedAt).coerceAtLeast(0L)
                 if (listenMs >= REPEAT_THRESHOLD_MS) {
                     val at = now
                     scope.launch(Dispatchers.IO) {
@@ -564,7 +586,7 @@ class Media3PlaybackController(
             }
         }
         dnaTrack = track
-        dnaStartedAt = now
+        resetDnaListenClock(isCurrentlyPlaying)
         scope.launch(Dispatchers.IO) {
             recorder.record(
                 com.howdy.echowave.domain.dna.ListeningEvent(
@@ -583,12 +605,14 @@ class Media3PlaybackController(
     private fun endDnaSession(completed: Boolean) {
         val recorder = dna ?: run {
             dnaTrack = null
+            resetDnaListenClock(false)
             return
         }
         val track = dnaTrack ?: return
         val now = dnaClock()
-        val listenMs = (now - dnaStartedAt).coerceAtLeast(0L)
+        val listenMs = dnaCurrentListenMs()
         dnaTrack = null
+        resetDnaListenClock(false)
         if (completed) {
             sessionTaste.record(track, completed = true, earlySkip = false)
         }

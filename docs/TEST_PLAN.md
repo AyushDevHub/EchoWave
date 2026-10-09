@@ -16,7 +16,7 @@ For a release candidate, also run:
 .\gradlew.bat assembleRelease bundleRelease
 ```
 
-The v1.0.0 build was produced with release signing configured locally. The unit suite reported 72 tests with no failures/errors. Lint completed without errors and reported 49 warnings and 1 hint; those findings still need review. The signed APK and AAB signatures were verified. These checks did not exercise playback on a clean device.
+The v1.0.0 build was produced with release signing configured locally. The unit suite reported 72 tests with no failures/errors. Lint completed without errors and reported 49 warnings and 1 hint at that time; those findings still need review. The signed APK and AAB signatures were verified. These checks did not exercise playback on a clean device.
 
 ## Device regression matrix
 
@@ -35,6 +35,21 @@ Run on at least one clean physical device using the signed release APK. Record d
 | Library/settings | Favorites, playlists, history, name, palette, recent search | State persists and clear/remove actions work | Not verified |
 | UI/accessibility | TalkBack, large font, smaller display, rotation if supported | Controls remain discoverable and layout usable | Not verified |
 | R8/release | Exercise playback, lyrics, persistence in minified signed build | No missing-code or serialization failures | Not verified |
+
+## v1.0.1 candidate device check (2026-10-10)
+
+Device: Motorola Moto G96 5G (`cuscoi_g25`), Android 16 (API 36). Installed the current working-tree debug build over the existing app data before the version metadata was bumped to 1.0.1; the tested app code matches the candidate code.
+
+| Area | Result |
+| --- | --- |
+| First track lyrics | “Saree Ke Fall Sa” displayed timed lyrics. The highlighted line changed as playback advanced. Tapping the lyric preview left the same track playing; it did not advance the queue. |
+| Track change | Started “Lungi Dance (From \"Chennai Express\")”. The player changed title and artwork and did not show the previous track's lyric text while loading. |
+| New track lyrics | LyricsPlus lookup returned no candidates and timed out; the UI ended at “Lyrics unavailable” with Retry. Playback continued on the new song. This confirms stale lyrics are cleared, but does not verify synced lyrics for this title. |
+| Release behavior | Not verified. This was a debug build; a signed, minified release still needs device testing. |
+
+The phone also reported an unrelated Bluetooth media session in `ERROR` state (“Bluetooth audio disconnected”); EchoWave's own media session reported `PLAYING` with the expected track during the checks above.
+
+Automated checks for the 1.0.1 candidate source completed on 2026-10-10: `test lint assembleRelease bundleRelease` succeeded. Lint reported 49 warnings and 2 hints with no errors; review the generated `app/build/reports/lint-results-debug.html` before treating lint as clean. The signed release APK and AAB were signature-verified locally. Release-mode on-device behavior remains unverified.
 
 ## Evidence recorded for v1.0.0
 

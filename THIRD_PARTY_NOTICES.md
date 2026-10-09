@@ -20,6 +20,9 @@ These projects carry their own license terms and notices. Consult the exact reso
 - Spotube, NewPipe Extractor, and BravePipe are reference-only or placeholder mentions; their implementation code is not included as an active dependency. LastWave-native text-matching (`core/common/TextMatch.kt`) is ported code under GPL-3.0; see [CREDITS.md](CREDITS.md).
 - LyricsPlus-compatible endpoints and LRCLIB are network services, not bundled source code. Their operators' terms and data practices are independent.
 - Search, discovery, radio candidate metadata, stream resolution, and playback currently use undocumented YouTube/YouTube Music InnerTube flows. These network services are not bundled libraries, and this notice does not imply provider authorization. EchoWave's local recommendation scorer is original project code; no third-party recommendation model/library was added for this feature. See [InnerTube notes](docs/INNER_TUBE_NOTES.md) and [privacy inventory](docs/PRIVACY.md).
-- No music or remote artwork is intended to be bundled in the APK. Verify licenses for any future bundled font, icon, image, or media asset.
+- Bundled fonts in `app/src/main/res/font/`:
+  - **Outfit** (`outfit.ttf`): Copyright (c) 2021 The Outfit Project Authors. Licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+  - **Plus Jakarta Sans** (`plus_jakarta_sans.ttf`): Copyright (c) 2020 The Plus Jakarta Sans Project Authors. Licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+- No music or remote artwork is bundled in the APK.
 
 The `innertubex` coordinate in the version catalog is inactive and is not declared as an app dependency. Recheck the Gradle dependency graph when dependencies change.

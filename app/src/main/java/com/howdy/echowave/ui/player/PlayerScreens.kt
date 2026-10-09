@@ -40,22 +40,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.VolumeDown
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -306,7 +306,7 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back to EchoWave")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to EchoWave")
             }
             Column(Modifier.weight(1f)) {
                 Text("NOW PLAYING", style = MaterialTheme.typography.labelMedium,
@@ -545,7 +545,7 @@ private fun PlayerPage(
                     tint = if (isFavorite) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = onAddToPlaylist) {
-                Icon(Icons.Default.PlaylistAdd, contentDescription = "Add to playlist")
+                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
             }
         }
 
@@ -627,7 +627,7 @@ private fun VolumeSlider(volume: Float, onVolume: (Float) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Default.VolumeDown, contentDescription = "Volume down",
+        Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = "Volume down",
             tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         Slider(
             value = volume.coerceIn(0f, 1f),
@@ -635,7 +635,7 @@ private fun VolumeSlider(volume: Float, onVolume: (Float) -> Unit) {
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                 .semantics { contentDescription = "Player volume" },
         )
-        Icon(Icons.Default.VolumeUp, contentDescription = "Volume up",
+        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Volume up",
             tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
@@ -646,7 +646,8 @@ private fun PlaybackScrubber(
     durationMs: Long,
     onSeek: (Long) -> Unit,
 ) {
-    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    var draggingProgress by remember { mutableStateOf<Float?>(null) }
+    val progress = draggingProgress ?: if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     val activeColor = MaterialTheme.colorScheme.primary
     val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
     Canvas(
@@ -654,9 +655,36 @@ private fun PlaybackScrubber(
             .pointerInput(durationMs) {
                 detectTapGestures { tap ->
                     if (durationMs > 0 && size.width > 0) {
-                        onSeek((tap.x / size.width * durationMs).toLong().coerceIn(0L, durationMs))
+                        val frac = (tap.x / size.width).coerceIn(0f, 1f)
+                        onSeek((frac * durationMs).toLong().coerceIn(0L, durationMs))
                     }
                 }
+            }
+            .pointerInput(durationMs) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        if (durationMs > 0 && size.width > 0) {
+                            draggingProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                        }
+                    },
+                    onDragEnd = {
+                        draggingProgress?.let { frac ->
+                            onSeek((frac * durationMs).toLong().coerceIn(0L, durationMs))
+                        }
+                        draggingProgress = null
+                    },
+                    onDragCancel = {
+                        draggingProgress = null
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        if (durationMs > 0 && size.width > 0) {
+                            val current = draggingProgress ?: progress
+                            val deltaFrac = dragAmount / size.width
+                            draggingProgress = (current + deltaFrac).coerceIn(0f, 1f)
+                        }
+                    },
+                )
             }
             .semantics {
                 contentDescription = "Playback progress"
@@ -668,7 +696,7 @@ private fun PlaybackScrubber(
         val stroke = 3.dp.toPx()
         drawLine(inactiveColor, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke, cap = StrokeCap.Round)
         if (thumbX > 0f) drawLine(activeColor, Offset(0f, y), Offset(thumbX, y), strokeWidth = stroke, cap = StrokeCap.Round)
-        drawCircle(activeColor, radius = 6.dp.toPx(), center = Offset(thumbX, y))
+        drawCircle(activeColor, radius = if (draggingProgress != null) 8.dp.toPx() else 6.dp.toPx(), center = Offset(thumbX, y))
     }
 }
 
@@ -928,7 +956,7 @@ private fun FullscreenLyrics(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back to player")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to player")
                 }
                 TrackArtwork(track.artworkUrl, "Artwork for ${track.title}",
                     Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))

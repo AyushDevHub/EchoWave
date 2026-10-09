@@ -22,11 +22,13 @@ The app does not host music. Users are responsible for their own use of the app 
 
 | Area | Features |
 | --- | --- |
-| Discovery | Search, browse collections, moods and genres, recent searches, taste-led suggestions |
+| Onboarding | First-run setup for listener name, genre picks, and artist preferences |
+| Discovery | Search with typed filters, album detail track lists, browse collections, moods and genres, recent searches, and seed-based radio autoplay |
+| Music DNA | Private on-device listening taste profile, day-part awareness, and multi-factor radio recommendations |
 | Playback | Queue, seek, previous/next, shuffle, repeat, and automatic advance |
 | Lyrics | Lyrics lookup and animated word-timed display when timing data is available |
 | Library | Local favorites, playlists, and listening history |
-| Personalization | Optional name greeting and selectable color themes |
+| Personalization | Selectable color themes (12 presets), custom typography (Outfit / Plus Jakarta Sans), player styles (Classic, Glow, Contrast), and optional personalized greeting |
 | Android integration | Media session, notification, lock-screen, and background playback controls |
 
 Provider behavior can change independently of EchoWave. Some fallback resolvers are placeholders and should not be presented as working providers.
@@ -57,16 +59,17 @@ Release signing keys are private and must never be committed. For a local releas
 .\gradlew.bat assembleRelease bundleRelease
 ```
 
-The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. The public v1.0.0 APK is a signed release artifact; it has not been fully regression-tested on a clean physical device. A successful build does not establish provider authorization, privacy compliance, or store approval.
+The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. The public v1.0.0 APK is the latest published artifact. A v1.0.1 candidate has been tested on a Moto G96 5G for lyrics synchronization and track changes; full device regression is incomplete, and the release checklist's provider authorization and content-rights prerequisite remains unresolved. Build success does not establish provider authorization, privacy compliance, or store approval.
 
 ## Project structure
 
 ```text
 app/src/main/java/com/howdy/echowave/
-  domain/       models, repository contracts, sources, and use cases
+  core/         script-agnostic text matching and network error handling
+  domain/       models, repository contracts, sources, recommendations, and use cases
   data/         local persistence, provider clients, and stream resolution
   playback/     Media3 service, session, controller, and queue routing
-  features/     optional feature boundaries, including AI extension interface
+  features/     feature boundaries, including Music DNA and AI extension interface
   ui/           Compose screens, navigation, and theme
 ```
 
@@ -76,6 +79,8 @@ The UI observes `PlaybackController` state and does not access ExoPlayer directl
 
 - [Documentation index](docs/INDEX.md)
 - [Architecture](ARCHITECTURE.md)
+- [Developer setup](docs/SETUP.md)
+- [Test plan](docs/TEST_PLAN.md)
 - [Release process and post-release checklist](docs/RELEASE_PROCESS.md)
 - [Risk register](docs/RISK_REGISTER.md)
 - [Privacy and data inventory](docs/PRIVACY.md)

@@ -156,7 +156,6 @@ class InnerTubeMusicSource(
         if (id.isBlank()) return AppResult.Err("track not found")
         return when (val r = search(id, 10)) {
             is AppResult.Ok -> r.value.tracks.firstOrNull { it.id == id }?.let { AppResult.Ok(it) }
-                ?: r.value.songs.firstOrNull()?.let { AppResult.Ok(it) }
                 ?: AppResult.Err("track not found")
             is AppResult.Err -> r
         }

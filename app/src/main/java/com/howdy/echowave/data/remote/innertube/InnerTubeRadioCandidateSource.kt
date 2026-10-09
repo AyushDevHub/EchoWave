@@ -52,7 +52,7 @@ class InnerTubeRadioCandidateSource(
 
     private fun Track.toCandidate(): TrackCandidate = TrackCandidate(
         track = this,
-        sourceId = id,
+        sourceId = this@InnerTubeRadioCandidateSource.id,
         relevanceScore = 80,
     )
 }

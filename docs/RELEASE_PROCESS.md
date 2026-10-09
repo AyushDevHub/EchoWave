@@ -1,16 +1,22 @@
 # Release Process
 
-This document records how the public v1.0.0 APK was assembled and what to do for future releases. GitHub repository releases are public downloads.
+This document records how the public v1.0.0 APK was assembled and what to do for future releases. GitHub repository releases are public downloads. The next candidate is v1.0.1 (versionCode 2); it is not cleared for public release.
 
 ## Before the next release
 
-1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). A GitHub release does not grant rights or provider authorization.
+1. Resolve the provider and content-rights items in [RISK_REGISTER.md](RISK_REGISTER.md). YouTube's [published API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) say undocumented APIs must not be used without express permission. The register records undocumented YouTube/YouTube Music access and uncleared rights as critical risks, and requires written permission or a permitted replacement before further distribution. A GitHub release does not grant rights or provider authorization. As of 2026-10-10, this release gate remains open.
 2. Update `versionCode` and `versionName` in `app/build.gradle.kts`; choose a new release tag, notes file, and APK asset name.
 3. Review the open issues and risk register. Update the privacy notice, credits, notices, and changelog for all behavior/dependency/source changes.
 4. Run `test`, `lint`, `assembleRelease`, and `bundleRelease`. Review every lint warning and build output.
 5. Install the signed release on a clean supported Android device. Run the applicable cases in [TEST_PLAN.md](TEST_PLAN.md), especially playback, seeking, background service, notifications, and upgrade behavior.
 6. Verify the APK signature and checksum. Never publish an unsigned artifact or include the signing key in the repository or GitHub Actions logs.
 7. Write release notes that state supported Android versions, known limitations, source changes, and provider/rights caveats.
+
+## v1.0.1 candidate status (2026-10-10)
+
+- Version set to 1.0.1 / versionCode 2 so an eventual signed update can upgrade v1.0.0.
+- Lyrics track-change and playback checks were run on the Moto G96 5G using a debug build; see [TEST_PLAN.md](TEST_PLAN.md). This is not a full release-device regression.
+- Do not create or publish a `v1.0.1` GitHub release until the critical provider authorization and content-rights gate above is resolved. The candidate version and local build do not imply approval to distribute it.
 
 ## Signing key
 
@@ -20,9 +26,9 @@ The v1.0.0 signing key was created locally and is required to sign future update
 
 ## Current GitHub release workflow
 
-`.github/workflows/publish-apk.yml` runs on the `v1.0.0` tag and creates a GitHub Release with the already-signed APK and its SHA-256 file. It does not build or sign the APK in GitHub Actions. The binary is committed under `release-assets/` so the workflow can publish the exact verified artifact without exposing the private key.
+`.github/workflows/publish-apk.yml` runs on push to any `v*` tag and creates a GitHub Release with the matching version's signed APK (`release-assets/EchoWave-<version>.apk`), checksum file, and release notes (`docs/releases/<version>.md`). It does not build or sign the APK in GitHub Actions. The signed binary is placed under `release-assets/` so the workflow can publish the verified artifact without exposing the private key.
 
-For a future version, update the trigger tag, APK asset, checksum, title, and release-notes path in the workflow before pushing the new tag. Confirm the workflow succeeds and the release page lists both assets. Verify the public download and checksum after publication.
+For a future version, place the signed `EchoWave-<version>.apk` and its checksum into `release-assets/`, add `docs/releases/<version>.md`, and push the new `v<version>` tag. Confirm the workflow succeeds and the release page lists the assets. Verify the public download and checksum after publication.
 
 ## After publication
 

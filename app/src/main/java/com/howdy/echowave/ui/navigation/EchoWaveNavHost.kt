@@ -58,6 +58,7 @@ import com.howdy.echowave.ui.library.LibraryViewModel
 import com.howdy.echowave.ui.onboarding.OnboardingScreen
 import com.howdy.echowave.ui.player.MiniPlayer
 import com.howdy.echowave.ui.player.LyricsViewModel
+import com.howdy.echowave.ui.player.LyricsUiState
 import com.howdy.echowave.ui.player.NowPlayingScreen
 import com.howdy.echowave.ui.search.SearchScreen
 import com.howdy.echowave.ui.settings.AboutSettingsScreen
@@ -320,6 +321,8 @@ fun EchoWaveNavHost(controller: PlaybackController) {
             composable(Routes.NOW_PLAYING) {
                 val current = state.currentTrack
                 LaunchedEffect(current?.id) { lyricsVm.load(current) }
+                val currentLyrics = lyricsUi.takeIf { it.trackId == current?.id }
+                    ?: LyricsUiState(trackId = current?.id, loading = current != null)
                 NowPlayingScreen(
                     state = state,
                     onToggle = controller::toggle,
@@ -355,7 +358,7 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                         val t = current ?: return@NowPlayingScreen
                         scope.launch { repo.libraryRepo.addToPlaylist(id, t) }
                     },
-                    lyrics = lyricsUi,
+                    lyrics = currentLyrics,
                     onRetryLyrics = { lyricsVm.load(current, forceRefresh = true) },
                     onBack = { nav.popBackStack() },
                 )

@@ -536,7 +536,7 @@ fun SearchScreen(
                     item(key = "songs-header") {
                         SectionLabel("Songs")
                     }
-                    items(ui.songs.indices.toList(), key = { "song-${ui.songs[it].id}" }) { i ->
+                    items(ui.songs.indices.toList(), key = { "song-${ui.songs[it].id}-$it" }) { i ->
                         val track = ui.songs[i]
                         ResultRow(
                             track = track,
@@ -553,7 +553,8 @@ fun SearchScreen(
                     item(key = "albums-header") {
                         SectionLabel("Albums")
                     }
-                    items(ui.albums, key = { "album-${it.id}" }) { album ->
+                    items(ui.albums.indices.toList(), key = { "album-${ui.albums[it].id}-$it" }) { i ->
+                        val album = ui.albums[i]
                         CollectionRow(
                             title = album.title,
                             subtitle = "Album · ${album.artist}",
@@ -566,7 +567,8 @@ fun SearchScreen(
                     item(key = "artists-header") {
                         SectionLabel("Artists")
                     }
-                    items(ui.artists, key = { "artist-${it.id}" }) { artist ->
+                    items(ui.artists.indices.toList(), key = { "artist-${ui.artists[it].id}-$it" }) { i ->
+                        val artist = ui.artists[i]
                         CollectionRow(
                             title = artist.name,
                             subtitle = "Artist",
@@ -579,7 +581,8 @@ fun SearchScreen(
                     item(key = "playlists-header") {
                         SectionLabel("Playlists")
                     }
-                    items(ui.playlists, key = { "playlist-${it.id}" }) { playlist ->
+                    items(ui.playlists.indices.toList(), key = { "playlist-${ui.playlists[it].id}-$it" }) { i ->
+                        val playlist = ui.playlists[i]
                         CollectionRow(
                             title = playlist.title,
                             subtitle = "Playlist · ${playlist.author}",
@@ -592,7 +595,7 @@ fun SearchScreen(
                     item(key = "videos-header") {
                         SectionLabel("Videos")
                     }
-                    items(ui.videos.indices.toList(), key = { "video-${ui.videos[it].id}" }) { i ->
+                    items(ui.videos.indices.toList(), key = { "video-${ui.videos[it].id}-$it" }) { i ->
                         val track = ui.videos[i]
                         ResultRow(
                             track = track,
@@ -606,7 +609,7 @@ fun SearchScreen(
                     item(key = "episodes-header") {
                         SectionLabel("Episodes")
                     }
-                    items(ui.episodes.indices.toList(), key = { "ep-${ui.episodes[it].id}" }) { i ->
+                    items(ui.episodes.indices.toList(), key = { "ep-${ui.episodes[it].id}-$it" }) { i ->
                         val track = ui.episodes[i]
                         ResultRow(
                             track = track,

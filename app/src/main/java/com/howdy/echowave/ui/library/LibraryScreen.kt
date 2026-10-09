@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -243,8 +244,21 @@ private fun PlaylistDetailScreen(
             }
             state.tracks.isEmpty() -> Text("This playlist is empty. Add tracks from the player.")
             else -> LazyColumn {
-                items(state.tracks.indices.toList()) { index ->
-                    TrackRow(state.tracks[index], onClick = { onPlay(state.tracks, index) })
+                items(state.tracks.indices.toList(), key = { "pl-${state.tracks[it].id}-$it" }) { index ->
+                    val track = state.tracks[index]
+                    TrackRow(
+                        track = track,
+                        onClick = { onPlay(state.tracks, index) },
+                        trailing = {
+                            IconButton(onClick = { vm.removeFromPlaylist(playlist.id, track.id) }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Remove from playlist",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -276,22 +290,26 @@ fun AddToPlaylistDialog(
         title = { Text("Add to playlist") },
         text = {
             Column {
-                LazyColumn {
-                    items(playlists) { p ->
-                        Text(
-                            "${p.name} (${p.trackCount})",
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                onAdd(p.id)
-                                onDismiss()
-                            }.padding(vertical = 10.dp),
-                        )
+                if (playlists.isNotEmpty()) {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
+                        items(playlists, key = { it.id }) { p ->
+                            Text(
+                                "${p.name} (${p.trackCount})",
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    onAdd(p.id)
+                                    onDismiss()
+                                }.padding(vertical = 10.dp),
+                            )
+                        }
                     }
+                    Spacer(Modifier.height(12.dp))
                 }
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
                     placeholder = { Text("New playlist name") },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },

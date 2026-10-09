@@ -13,6 +13,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "tracks")
@@ -157,4 +159,55 @@ abstract class EchoWaveDb : RoomDatabase() {
     abstract fun trackDao(): TrackDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun listeningEventDao(): ListeningEventDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `playlists` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `playlist_tracks` (" +
+                        "`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`playlistId` INTEGER NOT NULL, " +
+                        "`trackId` TEXT NOT NULL, " +
+                        "`position` INTEGER NOT NULL, " +
+                        "`title` TEXT NOT NULL, " +
+                        "`artist` TEXT NOT NULL, " +
+                        "`album` TEXT, " +
+                        "`artworkUrl` TEXT, " +
+                        "`durationMs` INTEGER, " +
+                        "FOREIGN KEY(`playlistId`) REFERENCES `playlists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_playlist_tracks_playlistId` ON `playlist_tracks` (`playlistId`)"
+                )
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_playlist_tracks_trackId` ON `playlist_tracks` (`trackId`)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `listening_events` (" +
+                        "`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`trackId` TEXT NOT NULL, " +
+                        "`title` TEXT NOT NULL, " +
+                        "`artist` TEXT NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`playedAt` INTEGER NOT NULL, " +
+                        "`listenMs` INTEGER NOT NULL, " +
+                        "`completionRatio` REAL, " +
+                        "`hourOfDay` INTEGER NOT NULL, " +
+                        "`context` TEXT NOT NULL, " +
+                        "`durationMs` INTEGER)"
+                )
+            }
+        }
+    }
 }

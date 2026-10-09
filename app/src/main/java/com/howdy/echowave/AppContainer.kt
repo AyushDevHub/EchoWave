@@ -44,7 +44,8 @@ class AppContainer(ctx: Context) {
         // Add explicit migrations for future schema changes; destructive
         // fallback remains only as a last resort for unmigrated versions.
         Room.databaseBuilder(appCtx, EchoWaveDb::class.java, "echowave.db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(EchoWaveDb.MIGRATION_1_2, EchoWaveDb.MIGRATION_2_3)
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 

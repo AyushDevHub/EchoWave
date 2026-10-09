@@ -1,9 +1,9 @@
-﻿name: Publish EchoWave APK
+name: Publish EchoWave APK
 
 on:
   push:
     tags:
-      - v1.0.0
+      - 'v*'
 
 permissions:
   contents: write
@@ -19,9 +19,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
+          VERSION="${RELEASE_TAG#v}"
+          APK_PATH="release-assets/EchoWave-${VERSION}.apk"
+          SHA_PATH="release-assets/EchoWave-${VERSION}.apk.sha256"
+          NOTES_PATH="docs/releases/${VERSION}.md"
+
+          ASSETS=()
+          if [ -f "$APK_PATH" ]; then
+            ASSETS+=("$APK_PATH")
+          fi
+          if [ -f "$SHA_PATH" ]; then
+            ASSETS+=("$SHA_PATH")
+          fi
+
+          NOTES_ARGS=()
+          if [ -f "$NOTES_PATH" ]; then
+            NOTES_ARGS+=(--notes-file "$NOTES_PATH")
+          else
+            NOTES_ARGS+=(--generate-notes)
+          fi
+
           gh release create "$RELEASE_TAG" \
-            release-assets/EchoWave-1.0.0.apk \
-            release-assets/EchoWave-1.0.0.apk.sha256 \
+            "${ASSETS[@]}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "EchoWave 1.0.0" \
-            --notes-file docs/releases/1.0.0.md
+            --title "EchoWave ${VERSION}" \
+            "${NOTES_ARGS[@]}"

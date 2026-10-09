@@ -23,6 +23,18 @@ class StreamPipelineTest {
         assertEquals(null, reg.onRefused("http://unknown"))
     }
 
+    @Test fun `registry evicts oldest entry in insertion order when capacity exceeded`() {
+        val reg = StreamRegistry()
+        for (i in 0..64) {
+            reg.record("http://u$i", "v$i", "client$i")
+        }
+        // First entry (u0) should have been evicted
+        assertEquals(null, reg.onRefused("http://u0"))
+        // Subsequent entries should still exist
+        assertEquals("v1", reg.onRefused("http://u1"))
+        assertEquals("v64", reg.onRefused("http://u64"))
+    }
+
     @Test fun `probe accept rules`() {
         assertTrue(StreamProbe.acceptHttpCode(200))
         assertTrue(StreamProbe.acceptHttpCode(206))

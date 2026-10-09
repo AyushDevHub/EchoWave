@@ -86,6 +86,7 @@ class SettingsRepository(
 
     companion object {
         const val GITHUB_URL = "https://github.com/AyushDevHub/EchoWave"
+        const val CREDITS_URL = "https://github.com/AyushDevHub/EchoWave/blob/main/CREDITS.md"
         private val APPEARANCE = stringPreferencesKey("appearance")
         private val THEME_PRESET = stringPreferencesKey("theme_preset")
         private val FONT_CHOICE = stringPreferencesKey("font_choice")

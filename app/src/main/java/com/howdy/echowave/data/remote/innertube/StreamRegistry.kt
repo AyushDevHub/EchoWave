@@ -9,7 +9,7 @@ package com.howdy.echowave.data.remote.innertube
 class StreamRegistry(
     private val clockMs: () -> Long = System::currentTimeMillis,
 ) {
-    private val minted = HashMap<String, Minted>()
+    private val minted = LinkedHashMap<String, Minted>()
     private val excluded = HashMap<String, MutableMap<String, Long>>()
 
     private data class Minted(val videoId: String, val client: String)

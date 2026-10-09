@@ -59,6 +59,10 @@ class LibraryViewModel(
         viewModelScope.launch { runCatching { repo.addToPlaylist(playlistId, track) } }
     }
 
+    fun removeFromPlaylist(playlistId: Long, trackId: String) {
+        viewModelScope.launch { runCatching { repo.removeFromPlaylist(playlistId, trackId) } }
+    }
+
     fun playlistTracks(id: Long): StateFlow<List<Track>> =
         repo.observePlaylistTracks(id)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

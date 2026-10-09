@@ -1,6 +1,6 @@
 # Risk Register
 
-**Reviewed:** 2026-10-07
+**Reviewed:** 2026-10-10
 **Scope:** EchoWave source repository and v1.0.0 Android APK. This is a project risk record, not legal advice or a guarantee of platform decisions.
 
 | Priority | Risk | Possible impact | Current action |
@@ -13,6 +13,8 @@
 | High | Playback and resolver behavior depend on remote services and fragile response formats. | Search/playback can fail after provider-side changes, throttling, or access restrictions. | Monitor issue reports and run the playback regression plan after each release. Do not evade blocks by rotating credentials or identities. |
 | Medium | Dependency, transitive license, and vulnerability inventory is incomplete. | Vulnerabilities or notice obligations may go undetected. | Generate and review an SBOM/license report and vulnerability scan for each release. |
 | Medium | The v1.0.0 release has not had a full clean-device playback regression. | Device-specific lifecycle, seek, Bluetooth, or background failures may affect users. | Run the physical-device cases in [TEST_PLAN.md](TEST_PLAN.md) before the next release. |
+
+The [YouTube API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) state that undocumented APIs must not be used without express permission. EchoWave's current InnerTube integration is not documented as authorized; applicability and the project's rights position have not been resolved. The v1.0.1 release gate therefore remains open.
 
 ## What platform action could look like
 

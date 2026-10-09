@@ -39,6 +39,8 @@ class QueueRoutingPlayer(wrapped: Player) : ForwardingPlayer(wrapped) {
         if (custom != null) custom() else super.seekToPreviousMediaItem()
     }
 
+    @Deprecated("Deprecated in Player", ReplaceWith("hasNextMediaItem()"))
+    @Suppress("DEPRECATION")
     override fun hasNext(): Boolean =
         if (PlaybackRouter.onNext != null) PlaybackRouter.canNext() else super.hasNext()
 
