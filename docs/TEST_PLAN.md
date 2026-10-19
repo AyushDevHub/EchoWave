@@ -2,6 +2,14 @@
 
 This plan separates automated checks from device verification. A green build does not establish provider permission, content rights, app-store compliance, or complete playback reliability.
 
+## v1.0.3 update destination (2026-10-20)
+
+`test lint assembleRelease bundleRelease` succeeded. Unit tests passed: 171 tests across 34 suites, 0 failures, 0 errors. Lint reported 0 errors, 50 warnings, and 4 hints; existing warning categories were reviewed and remain documented in the previous release check. Build output included the JDK 25 to JVM 24 target fallback and the DataStore protobuf `Unsafe` deprecation warning.
+
+The signed v1.0.3 APK verifies with the same release certificate as v1.0.0 (`08584910f251a6edab224f11f765868e3a4eb92ffb03a3b47894fcb10dd35374`). APK SHA-256: `155641de908d416be6f9b63e245035c92082fbf5c1b89f06d4e7821bd0173cc4`.
+
+On the connected Motorola Moto G96 5G (Android 16 / API 36), `adb install -r` upgraded the signed v1.0.2 app to v1.0.3 and preserved the app installation. The app launched to its main activity; the captured log scan found no EchoWave fatal exception. The UI tap to open the website was not automated on-device. Vercel deployment content and download-button destination must be confirmed after pushing the website change.
+
 ## v1.0.2 release check (2026-10-20)
 
 `test lint assembleRelease bundleRelease` succeeded. Unit tests passed: 171 tests, 0 failures, 0 errors. Lint completed with 50 warnings and 4 hints. Warning categories reviewed: dependency update recommendations, unused resources, Compose state boxing/KTX suggestions, SDK guards already required by app compatibility, a WebView JavaScript warning in the existing BotGuard token flow, a densityless album drawable, and resource-shrinking/configuration suggestions. No lint errors were reported. Build output also included Kotlin/JDK target compatibility fallback warnings (JDK 25 falls back to JVM target 24) and a deprecated `Unsafe` call warning from the DataStore protobuf dependency.

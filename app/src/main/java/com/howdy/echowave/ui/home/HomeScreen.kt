@@ -342,7 +342,7 @@ private fun ReleaseUpdateChip(
         onClick = {
             when (status) {
                 UpdateStatus.Failed -> onRetry()
-                is UpdateStatus.Available -> onOpenRelease(status.release.releasePageUrl)
+                is UpdateStatus.Available -> onOpenRelease(status.release.downloadWebsiteUrl)
                 else -> Unit
             }
         },

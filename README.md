@@ -8,9 +8,9 @@ EchoWave is an independent Android music player built with Kotlin, Jetpack Compo
 
 ## Download
 
-Get the latest APK from [GitHub Releases](https://github.com/AyushDevHub/EchoWave/releases/latest). EchoWave supports Android 8.0 (API 26) and newer. Install the APK manually; Android may ask you to allow your browser or file manager to install apps. This is an Android security prompt and the app cannot remove it. Updating over an existing install with the same signing key preserves app data; do not uninstall first.
+Get the latest APK from the [EchoWave download page](https://echowave-website.vercel.app/). EchoWave supports Android 8.0 (API 26) and newer. Open the page, tap **Download APK**, then open the downloaded file and tap **Update**. Android may ask you to allow your browser or file manager to install apps; approve that system prompt to continue. Updating over an existing install with the same signing key preserves app data; do not uninstall first.
 
-The app checks GitHub Releases while open and shows an update link when a newer version is available. With notification permission, it can also show a local update notification the next time the app is opened. It does not send remote push notifications or silently download or install updates.
+The app checks GitHub Releases while open and shows an update link when a newer version is available. The link and optional local update notification open the [EchoWave download page](https://echowave-website.vercel.app/), where users can download the APK without browsing GitHub Releases. With notification permission, the app can show a local update notification the next time it is opened. It does not send remote push notifications or silently download or install updates.
 
 ## Screenshots
 

@@ -26,6 +26,12 @@ This document records how EchoWave APK releases are assembled. GitHub repository
 - The maintainer explicitly requested publication while provider authorization and content-rights review remain unresolved. The release notes disclose this decision and the open risks; publication does not resolve them.
 - The release APK must be signed with the existing local release key, verified, and accompanied by its checksum. Record actual automated and connected-device checks in [TEST_PLAN.md](TEST_PLAN.md).
 
+## v1.0.3 release status
+
+- Update links in the Home screen and local update notifications open the Vercel download page. The page provides a direct APK download button and beginner-friendly install steps; it still reads public release metadata from GitHub.
+- Verify the Vercel deployment serves the committed `website/` content and its download button resolves to the newest APK before publishing this client update.
+- The v1.0.2 provider authorization and content-rights risks remain unresolved and are disclosed in the release notes.
+
 ## Signing key
 
 Gradle reads `~/.android/echowave-release.properties` (Windows: `%USERPROFILE%\.android\echowave-release.properties`). The referenced keystore and properties file contain sensitive signing material. Store encrypted backups separately from the development computer and test that a backup can be restored. Do not upload these files as repository artifacts or secrets unless a reviewed CI signing process is introduced.

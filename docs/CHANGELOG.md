@@ -20,6 +20,10 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 
 Published as a GitHub APK release. The existing provider-authorization and content-rights risks remain unresolved and are disclosed in the [release notes](releases/1.0.2.md) and [risk register](RISK_REGISTER.md).
 
+## 1.0.3 (unreleased)
+
+- Changed the in-app update chip and local update notification to open the EchoWave download website, with simpler install instructions for users.
+
 ## Unreleased
 
 No unreleased user-facing changes.

@@ -6,16 +6,16 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.IOException
-import java.net.URI
 import java.util.concurrent.TimeUnit
 
 data class LatestAppRelease(
     val version: String,
-    val releasePageUrl: String,
+    val downloadWebsiteUrl: String,
 )
 
 /** Reads public release metadata only; it never downloads or installs an APK. */
 object GitHubReleaseChecker {
+    private const val DOWNLOAD_WEBSITE_URL = "https://echowave-website.vercel.app/"
     private const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/AyushDevHub/EchoWave/releases/latest"
 
@@ -51,14 +51,7 @@ object GitHubReleaseChecker {
             }
             if (!hasApk) throw IOException("The latest release does not include its APK")
 
-            val pageUrl = release.optString("html_url")
-            val uri = runCatching { URI(pageUrl) }.getOrNull()
-            if (uri?.scheme != "https" || uri.host != "github.com" ||
-                !uri.path.orEmpty().startsWith("/AyushDevHub/EchoWave/releases/")
-            ) {
-                throw IOException("GitHub returned an invalid release page")
-            }
-            LatestAppRelease(latestVersion, uri.toASCIIString())
+            LatestAppRelease(latestVersion, DOWNLOAD_WEBSITE_URL)
         }
     }
 

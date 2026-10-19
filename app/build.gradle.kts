@@ -25,8 +25,8 @@ android {
         // Donor parity (Echo-Music minSdk 26): java.util.Base64 in JsCodec needs API 26+.
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -46,13 +46,13 @@ object UpdateNotifier {
         val openRelease = PendingIntent.getActivity(
             context,
             NOTIFICATION_ID,
-            Intent(Intent.ACTION_VIEW, Uri.parse(release.releasePageUrl)),
+            Intent(Intent.ACTION_VIEW, Uri.parse(release.downloadWebsiteUrl)),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("EchoWave update available")
-            .setContentText("Version ${release.version} is ready. Tap to view the release.")
+            .setContentText("Version ${release.version} is ready. Tap to download it.")
             .setContentIntent(openRelease)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
