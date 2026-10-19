@@ -2,7 +2,7 @@
 
 User-visible changes are listed here. Internal maintenance and exhaustive file changes are recorded in Git history.
 
-## Unreleased
+## 1.0.2 (2026-10-20)
 
 - Added a refresh action to the Up next queue. It keeps the current track and replaces only upcoming recommendations.
 - Added a Settings shortcut to GitHub's feature request and feedback forms.
@@ -16,6 +16,13 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 - Added Echo This from Now Playing: review ranked candidates based on the current track and available on-device listening signals, then add selected tracks to the queue without replacing it. Music DNA influence now grows with supporting event volume.
 - Added a Music DNA profile card to Listening Summary and per-candidate reasons in Echo This, based on the actual scoring signals used for ranking.
 - Avoided showing a time-of-day-derived profile label when that optional display is off; candidates with unknown metadata no longer receive an unsupported fresh-match reason or bonus.
+- Added a broader Bollywood artist picker with catalog artwork and progressive suggestions, including K.K. and Sukhwinder Singh.
+
+Published as a GitHub APK release. The existing provider-authorization and content-rights risks remain unresolved and are disclosed in the [release notes](releases/1.0.2.md) and [risk register](RISK_REGISTER.md).
+
+## Unreleased
+
+No unreleased user-facing changes.
 
 ## 1.0.1 (2026-10-10)
 

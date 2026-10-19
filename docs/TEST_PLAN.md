@@ -2,6 +2,14 @@
 
 This plan separates automated checks from device verification. A green build does not establish provider permission, content rights, app-store compliance, or complete playback reliability.
 
+## v1.0.2 release check (2026-10-20)
+
+`test lint assembleRelease bundleRelease` succeeded. Unit tests passed: 171 tests, 0 failures, 0 errors. Lint completed with 50 warnings and 4 hints. Warning categories reviewed: dependency update recommendations, unused resources, Compose state boxing/KTX suggestions, SDK guards already required by app compatibility, a WebView JavaScript warning in the existing BotGuard token flow, a densityless album drawable, and resource-shrinking/configuration suggestions. No lint errors were reported. Build output also included Kotlin/JDK target compatibility fallback warnings (JDK 25 falls back to JVM target 24) and a deprecated `Unsafe` call warning from the DataStore protobuf dependency.
+
+The signed APK verifies with the same release certificate as v1.0.0 (`08584910f251a6edab224f11f765868e3a4eb92ffb03a3b47894fcb10dd35374`) and contains none of the three removed MP3 files. APK SHA-256: `55dc0b95d9dfbcd9a08da1253b8b45df0d79c09b70191c4ef9df12307d5894b8`.
+
+On the Motorola Moto G96 5G (Android 16 / API 36), `adb install -r` upgraded the existing signed install to version 1.0.2 and preserved local app data. The app opened, a catalog track (“Soni De Nakhre”) started, and Android's EchoWave media session reported `PLAYING` with the expected title and artist; the captured log scan had no EchoWave fatal exception. This was an upgrade/playback smoke check, not a clean-device run or completion of the full regression matrix above. The release notes disclose the unresolved provider-authorization and content-rights risks; publication does not resolve them.
+
 ## Automated checks
 
 Run from the repository root on Windows:

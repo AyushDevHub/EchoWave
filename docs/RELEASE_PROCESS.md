@@ -21,6 +21,11 @@ This document records how EchoWave APK releases are assembled. GitHub repository
 - A signed 1.0.1 APK was built locally on 2026-10-10. Its signature verifies and matches the v1.0.0 certificate; the APK archive contains none of the three removed MP3 files. The debug build received a limited device smoke check; full signed-release device regression was not completed. Current unit/lint/build evidence is recorded in [TEST_PLAN.md](TEST_PLAN.md).
 - Version 1.0.1 was published despite the unresolved provider authorization and content-rights review. The release notes disclose this status. The next release should not proceed until the critical risks are resolved.
 
+## v1.0.2 release status (2026-10-20)
+
+- The maintainer explicitly requested publication while provider authorization and content-rights review remain unresolved. The release notes disclose this decision and the open risks; publication does not resolve them.
+- The release APK must be signed with the existing local release key, verified, and accompanied by its checksum. Record actual automated and connected-device checks in [TEST_PLAN.md](TEST_PLAN.md).
+
 ## Signing key
 
 Gradle reads `~/.android/echowave-release.properties` (Windows: `%USERPROFILE%\.android\echowave-release.properties`). The referenced keystore and properties file contain sensitive signing material. Store encrypted backups separately from the development computer and test that a backup can be restored. Do not upload these files as repository artifacts or secrets unless a reviewed CI signing process is introduced.
