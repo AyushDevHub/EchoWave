@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.ConcurrentHashMap
+import java.text.Normalizer
 
 /** A word/phrase inside a line with the provider's word-start timestamp. */
 data class LrcWord(val ms: Long, val text: String)
@@ -46,8 +47,12 @@ class LyricsRepository(
     suspend fun lyrics(track: Track, forceRefresh: Boolean = false): List<LrcLine>? {
         if (!forceRefresh) cache[track.id]?.let { return it }
         val result = withTimeoutOrNull(30_000) { withContext(Dispatchers.IO) {
+            // Prefer lyrics whose title, artist and recording length agree with
+            // the playing track. Fuzzy community mirrors can return a different
+            // edit/remix whose timestamps drift against this audio.
+            val verifiedLrclib = fetchLrclib(track)
             // LyricsPlus can return enhanced word timestamps, line-synced LRC,
-            // or plain text. Prefer word-sync whenever the payload has it.
+            // or plain text. Use it when no verified, timed LRCLIB match exists.
             val plusPayload = YouLyPlus.fetch(
                 title = track.title,
                 artist = track.lyricsArtist().takeIf { it.isNotBlank() },
@@ -66,11 +71,13 @@ class LyricsRepository(
                 title.length > 2 && artist.length > 2 && text.contains(title) && text.contains(artist)
             }
             val normalizedPlus = plusLines?.let { normalizeLyricTiming(it, track.durationMs) }
-            // A provider can return malformed word times (for example, seconds
-            // scaled twice). Prefer another timed source over freezing every
-            // line at zero or showing timestamps beyond the track duration.
-            normalizedPlus?.takeIf { it.any { line -> line.ms > 0L } }
-                ?: fetchLrclib(track)
+            val verifiedTimed = verifiedLrclib?.takeIf { lines -> lines.any { it.ms > 0L } }
+            // A community provider can return malformed timestamps (for example,
+            // seconds scaled twice). Normalize and reject timing outside the
+            // recording before showing it.
+            verifiedTimed
+                ?: normalizedPlus?.takeIf { it.any { line -> line.ms > 0L } }
+                ?: verifiedLrclib
                 ?: plusLines
         } } ?: run {
             android.util.Log.w("EchoWaveLyrics", "Lyrics lookup timed out")
@@ -97,12 +104,13 @@ class LyricsRepository(
                     body,
                 )
                 results.asSequence()
+                    .filter { it.matches(track) }
                     .sortedBy { result ->
                         val duration = result.duration?.times(1000.0)?.toLong()
                         if (duration == null || track.durationMs == null) Long.MAX_VALUE
                         else kotlin.math.abs(duration - track.durationMs)
                     }
-                    .mapNotNull(::parseLrclibResult)
+                    .mapNotNull { parseLrclibResult(it) }
                     .firstOrNull()
             }
         } catch (cancelled: CancellationException) {
@@ -123,7 +131,7 @@ class LyricsRepository(
                 if (!response.isSuccessful) return null
                 response.body?.string()?.let { body ->
                     runCatching { json.decodeFromString(LrclibResponse.serializer(), body) }
-                        .getOrNull()?.let(::parseLrclibResult)
+                        .getOrNull()?.takeIf { it.matches(track) }?.let(::parseLrclibResult)
                 }
             }
     } catch (cancelled: CancellationException) {
@@ -167,6 +175,34 @@ class LyricsRepository(
             ?.lineSequence()?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { LrcLine(0, it) }?.toList()
             ?.takeIf { it.isNotEmpty() }
     }
+
+    private fun LrclibResponse.matches(track: Track): Boolean {
+        val requestedTitle = normalizeMetadata(track.title)
+        val returnedTitle = normalizeMetadata(trackName.orEmpty())
+        if (requestedTitle.length < 4 || returnedTitle.isBlank()) return false
+        val titleMatches = returnedTitle == requestedTitle ||
+            returnedTitle.startsWith(requestedTitle) || requestedTitle.startsWith(returnedTitle)
+        if (!titleMatches) return false
+
+        val requestedArtist = normalizeMetadata(track.lyricsArtist())
+        val returnedArtist = normalizeMetadata(artistName.orEmpty())
+        if (requestedArtist.isNotBlank() && returnedArtist.isNotBlank() &&
+            !returnedArtist.contains(requestedArtist) && !requestedArtist.contains(returnedArtist)
+        ) return false
+
+        val requestedDuration = track.durationMs
+        val returnedDuration = duration?.times(1000.0)?.toLong()
+        if (requestedDuration != null && requestedDuration > 0 && returnedDuration != null && returnedDuration > 0) {
+            val allowedDrift = maxOf(12_000L, (requestedDuration * 0.08).toLong())
+            if (kotlin.math.abs(requestedDuration - returnedDuration) > allowedDrift) return false
+        }
+        return true
+    }
+
+    private fun normalizeMetadata(value: String): String = Normalizer
+        .normalize(value.lowercase(), Normalizer.Form.NFD)
+        .replace(Regex("\\p{Mn}+"), "")
+        .filter(Char::isLetterOrDigit)
 
     internal fun parseLrclib(body: String): List<LrcLine>? {
         return try {
