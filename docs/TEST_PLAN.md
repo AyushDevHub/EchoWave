@@ -8,7 +8,7 @@ This plan separates automated checks from device verification. A green build doe
 
 The signed v1.0.3 APK verifies with the same release certificate as v1.0.0 (`08584910f251a6edab224f11f765868e3a4eb92ffb03a3b47894fcb10dd35374`). APK SHA-256: `155641de908d416be6f9b63e245035c92082fbf5c1b89f06d4e7821bd0173cc4`.
 
-On the connected Motorola Moto G96 5G (Android 16 / API 36), `adb install -r` upgraded the signed v1.0.2 app to v1.0.3 and preserved the app installation. The app launched to its main activity; the captured log scan found no EchoWave fatal exception. The UI tap to open the website was not automated on-device. Vercel deployment content and download-button destination must be confirmed after pushing the website change.
+On the connected Motorola Moto G96 5G (Android 16 / API 36), `adb install -r` upgraded the signed v1.0.2 app to v1.0.3 and preserved the app installation. The app launched to its main activity; the captured log scan found no EchoWave fatal exception. The UI tap to open the website was not automated on-device. After pushing commit `eca3061`, the Vercel site returned HTTP 200 with the new beginner install steps and no old GitHub browsing instructions. The page fallback links now point to v1.0.3, matching the public latest-release APK asset.
 
 ## v1.0.2 release check (2026-10-20)
 

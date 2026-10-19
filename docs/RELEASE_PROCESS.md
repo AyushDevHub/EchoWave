@@ -29,7 +29,7 @@ This document records how EchoWave APK releases are assembled. GitHub repository
 ## v1.0.3 release status
 
 - Update links in the Home screen and local update notifications open the Vercel download page. The page provides a direct APK download button and beginner-friendly install steps; it still reads public release metadata from GitHub.
-- Verify the Vercel deployment serves the committed `website/` content and its download button resolves to the newest APK before publishing this client update.
+- Verified Vercel serves the pushed `website/` content and the public latest-release feed exposes `EchoWave-1.0.3.apk`; the page now has v1.0.3 fallback download links as well.
 - The v1.0.2 provider authorization and content-rights risks remain unresolved and are disclosed in the release notes.
 
 ## Signing key
