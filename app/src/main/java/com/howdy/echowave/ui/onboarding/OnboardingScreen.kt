@@ -104,8 +104,10 @@ fun OnboardingScreen(
             else -> ArtistStep(
                 ui = ui,
                 onQuery = vm::onArtistQuery,
+                onRetry = { if (ui.artistQuery.isBlank() && "Bollywood" in ui.genres) vm.retryBollywoodArtists() else vm.onArtistQuery(ui.artistQuery) },
                 onToggle = vm::toggleArtist,
                 isSelected = vm::isSelected,
+                onLoadMore = vm::loadMoreBollywoodArtists,
                 saving = ui.saving,
                 onDone = { vm.complete(editMode, onComplete) },
             )
@@ -181,8 +183,10 @@ private fun GenreStep(
 private fun ArtistStep(
     ui: OnboardingUiState,
     onQuery: (String) -> Unit,
+    onRetry: () -> Unit,
     onToggle: (com.howdy.echowave.domain.model.SearchItem.Artist) -> Unit,
     isSelected: (com.howdy.echowave.domain.model.SearchItem.Artist) -> Boolean,
+    onLoadMore: () -> Unit,
     saving: Boolean,
     onDone: () -> Unit,
 ) {
@@ -229,7 +233,7 @@ private fun ArtistStep(
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Couldn't load artists. ${ui.artistError}")
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { onQuery(ui.artistQuery) }) { Text("Retry") }
+                    Button(onClick = onRetry) { Text("Retry") }
                 }
             }
             ui.artistQuery.isBlank() && ui.artistResults.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -241,7 +245,7 @@ private fun ArtistStep(
                     modifier = Modifier.padding(16.dp),
                 )
             }
-            ui.artistResults.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            ui.artistResults.isEmpty() && !ui.artistSuggestionsHasMore -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     "No artists found.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -276,6 +280,18 @@ private fun ArtistStep(
                                 contentDescription = "Picked",
                                 tint = MaterialTheme.colorScheme.primary,
                             )
+                        }
+                    }
+                }
+                if (ui.artistSuggestionsHasMore && ui.artistQuery.isBlank()) {
+                    item(key = "more-bollywood-artists") {
+                        TextButton(
+                            onClick = onLoadMore,
+                            enabled = !ui.artistSuggestionsLoading,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        ) {
+                            if (ui.artistSuggestionsLoading) CircularProgressIndicator(Modifier.size(18.dp))
+                            else Text("Show more Bollywood artists")
                         }
                     }
                 }

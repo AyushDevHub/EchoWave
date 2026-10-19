@@ -32,12 +32,21 @@ val ONBOARDING_GENRES = listOf(
     "Lo-fi",
 )
 
-/** Recognizable starter artists surfaced when Bollywood is selected. Artist artwork comes from the live catalog. */
+/** Broad Bollywood starter catalog. Results and artwork are verified/fetched from the live artist catalog. */
 private val BOLLYWOOD_ARTIST_STARTERS = listOf(
-    "Arijit Singh", "Yo Yo Honey Singh", "Badshah", "Shreya Ghoshal",
-    "Sonu Nigam", "Neha Kakkar", "Sunidhi Chauhan", "Jubin Nautiyal",
-    "A. R. Rahman", "Pritam", "Vishal-Shekhar", "Atif Aslam",
+    "Arijit Singh", "K.K.", "Sukhwinder Singh", "Yo Yo Honey Singh", "Badshah",
+    "Shreya Ghoshal", "Sonu Nigam", "Udit Narayan", "Kumar Sanu", "Alka Yagnik",
+    "Sunidhi Chauhan", "Shaan", "Neha Kakkar", "Jubin Nautiyal", "A. R. Rahman",
+    "Pritam", "Vishal-Shekhar", "Atif Aslam", "Mohit Chauhan", "Kishore Kumar",
+    "Lata Mangeshkar", "Asha Bhosle", "Mukesh", "Mika Singh", "Kailash Kher",
+    "Shankar Mahadevan", "Rahat Fateh Ali Khan", "Armaan Malik", "Darshan Raval",
+    "B Praak", "Himesh Reshammiya", "Sukhbir", "Daler Mehndi", "Suresh Wadkar",
+    "Hariharan", "Kavita Krishnamurthy", "Anuradha Paudwal", "Rekha Bhardwaj",
+    "Kunal Ganjawala", "Amit Trivedi", "Sachin-Jigar", "Salim-Sulaiman",
+    "Vishal Dadlani", "Shekhar Ravjiani", "Raghav Chaitanya", "Asees Kaur",
+    "Palak Muchhal", "Monali Thakur", "Shilpa Rao", "Tulsi Kumar",
 )
+private const val ARTIST_SUGGESTION_PAGE_SIZE = 12
 
 data class OnboardingUiState(
     val step: Int = 0,
@@ -47,6 +56,8 @@ data class OnboardingUiState(
     val artistQuery: String = "",
     val artistLoading: Boolean = false,
     val artistResults: List<SearchItem.Artist> = emptyList(),
+    val artistSuggestionsHasMore: Boolean = false,
+    val artistSuggestionsLoading: Boolean = false,
     val artistError: String? = null,
     val saving: Boolean = false,
 ) {
@@ -79,6 +90,7 @@ class OnboardingViewModel(
     private val jobs get() = workScope ?: viewModelScope
     private var searchJob: Job? = null
     private var suggestionsJob: Job? = null
+    private var nextSuggestionIndex = 0
 
     fun prefillName(current: String) {
         if (_ui.value.name.isBlank() && current.isNotBlank()) {
@@ -117,7 +129,10 @@ class OnboardingViewModel(
         _ui.value = _ui.value.copy(artistQuery = q, artistError = null)
         searchJob?.cancel()
         if (q.isBlank()) {
-            _ui.value = _ui.value.copy(artistResults = emptyList(), artistLoading = false)
+            _ui.value = _ui.value.copy(
+                artistResults = emptyList(), artistLoading = false,
+                artistSuggestionsHasMore = false, artistSuggestionsLoading = false,
+            )
             return
         }
         searchJob = jobs.launch {
@@ -137,14 +152,45 @@ class OnboardingViewModel(
         }
     }
 
+    fun loadMoreBollywoodArtists() {
+        if (_ui.value.artistSuggestionsLoading || !_ui.value.artistSuggestionsHasMore) return
+        fetchBollywoodArtistPage(append = true)
+    }
+
+    fun retryBollywoodArtists() {
+        if (_ui.value.artistLoading || _ui.value.artistSuggestionsLoading) return
+        if (_ui.value.artistResults.isEmpty()) loadBollywoodArtistStarters()
+        else {
+            nextSuggestionIndex = (nextSuggestionIndex - ARTIST_SUGGESTION_PAGE_SIZE).coerceAtLeast(0)
+            fetchBollywoodArtistPage(append = true)
+        }
+    }
+
     private fun loadBollywoodArtistStarters() {
         suggestionsJob?.cancel()
-        _ui.value = _ui.value.copy(artistQuery = "", artistLoading = true, artistError = null, artistResults = emptyList())
+        nextSuggestionIndex = 0
+        _ui.value = _ui.value.copy(
+            artistQuery = "", artistLoading = true, artistError = null,
+            artistResults = emptyList(), artistSuggestionsHasMore = false,
+        )
+        fetchBollywoodArtistPage(append = false)
+    }
+
+    private fun fetchBollywoodArtistPage(append: Boolean) {
+        val start = nextSuggestionIndex
+        val end = minOf(start + ARTIST_SUGGESTION_PAGE_SIZE, BOLLYWOOD_ARTIST_STARTERS.size)
+        if (start >= end) return
+        nextSuggestionIndex = end
+        _ui.value = _ui.value.copy(
+            artistSuggestionsLoading = append,
+            artistLoading = !append,
+            artistError = null,
+        )
         suggestionsJob = jobs.launch {
             try {
                 val results = coroutineScope {
                     val requestLimit = Semaphore(3)
-                    BOLLYWOOD_ARTIST_STARTERS.map { name ->
+                    BOLLYWOOD_ARTIST_STARTERS.subList(start, end).map { name ->
                         async { requestLimit.withPermit { music.searchArtists(name).let { result ->
                             when (result) {
                                 is AppResult.Ok -> result.value.firstOrNull { artist ->
@@ -156,10 +202,19 @@ class OnboardingViewModel(
                         } } }
                     }.mapNotNull { it.await() }.distinctBy { it.id }
                 }
-                _ui.value = _ui.value.copy(artistLoading = false, artistResults = results)
+                val combined = if (append) _ui.value.artistResults + results else results
+                _ui.value = _ui.value.copy(
+                    artistLoading = false,
+                    artistSuggestionsLoading = false,
+                    artistSuggestionsHasMore = nextSuggestionIndex < BOLLYWOOD_ARTIST_STARTERS.size,
+                    artistResults = combined.distinctBy { it.id },
+                )
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _ui.value = _ui.value.copy(artistLoading = false, artistError = e.message ?: "Please retry.")
+                _ui.value = _ui.value.copy(
+                    artistLoading = false, artistSuggestionsLoading = false,
+                    artistError = e.message ?: "Please retry.",
+                )
             }
         }
     }
