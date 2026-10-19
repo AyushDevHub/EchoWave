@@ -27,7 +27,7 @@
         <p class="tag" style="color:var(--accent)">Open-source music player for Android</p>
         <h1>A quieter way<br>to <em>listen.</em></h1>
         <p class="lead">Search, queue, lyrics and your own playlists, in a player you can colour to your taste.</p>
-        <div class="actions"><a class="btn dlbtn" href="https://github.com/AyushDevHub/EchoWave/releases/download/v1.0.3/EchoWave-1.0.3.apk" download><svg class="dl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-5-5m5 5l5-5M4 21h16"/></svg>Download APK</a><a class="btn ghost" href="https://github.com/AyushDevHub/EchoWave" target="_blank" rel="noreferrer"><svg class="gh" aria-hidden="true"><use href="#gh"/></svg> View source</a></div>
+        <div class="actions"><a class="btn dlbtn" href="EchoWave.apk" download><svg class="dl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-5-5m5 5l5-5M4 21h16"/></svg>Download APK</a><a class="btn ghost" href="https://github.com/AyushDevHub/EchoWave" target="_blank" rel="noreferrer"><svg class="gh" aria-hidden="true"><use href="#gh"/></svg> View source</a></div>
         <p class="meta" id="meta">v1.0.3 · Android 8.0+ · GPL-3.0</p>
       </div>
       <div class="waves" aria-hidden="true">
@@ -41,7 +41,7 @@
     </section>
     <section class="tile terra dl">
       <div><p class="tag">Free · No ads</p><div class="big">Get the latest build</div></div>
-      <a class="btn dlbtn" href="https://github.com/AyushDevHub/EchoWave/releases/download/v1.0.3/EchoWave-1.0.3.apk" download>Download</a>
+      <a class="btn dlbtn" href="EchoWave.apk" download>Download</a>
     </section>
     <section class="tile tan">
       <p class="tag">Background</p>
@@ -105,7 +105,7 @@
   </footer>
 </div>
 
-<div class="sticky" id="sticky"><a class="btn dlbtn" href="https://github.com/AyushDevHub/EchoWave/releases/download/v1.0.3/EchoWave-1.0.3.apk" download>Download APK</a><a class="gh-btn" href="https://github.com/AyushDevHub/EchoWave" target="_blank" rel="noreferrer" aria-label="EchoWave on GitHub"><svg class="gh" aria-hidden="true"><use href="#gh"/></svg></a></div>
+<div class="sticky" id="sticky"><a class="btn dlbtn" href="EchoWave.apk" download>Download APK</a><a class="gh-btn" href="https://github.com/AyushDevHub/EchoWave" target="_blank" rel="noreferrer" aria-label="EchoWave on GitHub"><svg class="gh" aria-hidden="true"><use href="#gh"/></svg></a></div>
 
 <script>
 // scroll-in reveal
@@ -124,12 +124,7 @@ themes.forEach(([n,c],i)=>{const b=document.createElement('button');b.style.setP
   b.onclick=()=>{document.documentElement.style.setProperty('--accent',c);sw.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')};
   sw.appendChild(b)});
 
-// Latest APK asset; the page provides a simple download path without GitHub browsing.
-fetch('https://api.github.com/repos/AyushDevHub/EchoWave/releases/latest').then(r=>r.ok?r.json():Promise.reject()).then(j=>{
-  const a=(j.assets||[]).find(x=>x.name.endsWith('.apk')); if(!a)return;
-  document.querySelectorAll('.dlbtn').forEach(b=>b.href=a.browser_download_url);
-  document.getElementById('meta').textContent=j.tag_name+' · '+(a.size/1048576).toFixed(1)+' MB · Android 8.0+ · GPL-3.0';
-}).catch(()=>{});
+// APK is hosted by this website so the download does not send users to GitHub.
 </script>
 </body>
 </html>

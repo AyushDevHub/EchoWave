@@ -44,7 +44,7 @@ The app checks GitHub Releases while open and shows an update link when a newer 
 
 Listening history, taste signals, favorites, playlists, and imported audio are stored on the device. EchoWave has no account system or app analytics backend and does not report listening activity to the project. The update check contacts GitHub's public release endpoint and exposes normal network metadata such as the device IP; see [Privacy](docs/PRIVACY.md).
 
-The About screen shows the latest APK's public GitHub download count. This counts downloads, not unique people, successful installs, or current users. EchoWave sends no app-open or listening events to maintainers, so active-use counts are unavailable.
+The About screen shows the latest APK's public GitHub download count. It counts downloads from GitHub, not APK downloads from the EchoWave website, unique people, successful installs, or current users. EchoWave sends no app-open or listening events to maintainers, so active-use counts are unavailable.
 
 Share feedback or propose a feature through [GitHub Issues](https://github.com/AyushDevHub/EchoWave/issues/new/choose). Do not include personal data, account credentials, cookies, signed URLs, or private listening history in a report.
 
