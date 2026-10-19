@@ -6,6 +6,7 @@ User-visible changes are listed here. Internal maintenance and exhaustive file c
 
 - Added a refresh action to the Up next queue. It keeps the current track and replaces only upcoming recommendations.
 - Added a Settings shortcut to GitHub's feature request and feedback forms.
+- Added the public latest-APK download count to About and a local update notification when a newer release is found while the app is open.
 - Reorganized the README, documented the limits of download and active-use statistics, and added screenshots captured from the app.
 - Fixed the stream probe's last-byte range, ignored stale player-ended callbacks after a new track selection, and stopped queue navigation from racing through multiple unavailable tracks.
 - Added Settings controls to pause Music DNA collection and personalization or reset its local listening data.

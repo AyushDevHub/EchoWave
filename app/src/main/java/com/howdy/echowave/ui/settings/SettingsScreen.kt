@@ -60,6 +60,7 @@ import com.howdy.echowave.data.local.FontChoice
 import com.howdy.echowave.data.local.SettingsRepository
 import com.howdy.echowave.data.local.ThemePreset
 import com.howdy.echowave.ui.components.AppLogo
+import com.howdy.echowave.data.remote.update.GitHubReleaseChecker
 
 @Composable
 fun SettingsScreen(
@@ -364,6 +365,16 @@ fun PlaybackSettingsScreen(
 @Composable
 fun AboutSettingsScreen(onBack: () -> Unit = {}) {
     val uri = LocalUriHandler.current
+    var apkDownloads by remember { mutableStateOf<Int?>(null) }
+    var statsFailed by remember { mutableStateOf(false) }
+    var statsRetry by remember { mutableStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(statsRetry) {
+        apkDownloads = null
+        statsFailed = false
+        runCatching { GitHubReleaseChecker.latestApkDownloadCount() }
+            .onSuccess { apkDownloads = it }
+            .onFailure { statsFailed = true }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -404,6 +415,21 @@ fun AboutSettingsScreen(onBack: () -> Unit = {}) {
                     Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 12.dp))
+                    Text(
+                        "Latest APK downloads: ${apkDownloads?.toString() ?: if (statsFailed) "Unavailable" else "Loading…"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (statsFailed) {
+                        TextButton(onClick = { statsRetry++ }) { Text("Retry stats") }
+                    } else {
+                        Text(
+                            "GitHub download total only; installs and active users are not counted.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
+                        )
+                    }
                     AboutLink("Project on GitHub", Icons.AutoMirrored.Filled.OpenInNew) {
                         uri.openUri(SettingsRepository.GITHUB_URL)
                     }

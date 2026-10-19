@@ -10,7 +10,7 @@ EchoWave is an independent Android music player built with Kotlin, Jetpack Compo
 
 Get the latest APK from [GitHub Releases](https://github.com/AyushDevHub/EchoWave/releases/latest). EchoWave supports Android 8.0 (API 26) and newer. Install the APK manually; Android may ask you to allow your browser or file manager to install apps. This is an Android security prompt and the app cannot remove it. Updating over an existing install with the same signing key preserves app data; do not uninstall first.
 
-The app checks GitHub Releases while open and shows an update link when a newer version is available. It does not silently download or install updates, and it does not send remote push notifications.
+The app checks GitHub Releases while open and shows an update link when a newer version is available. With notification permission, it can also show a local update notification the next time the app is opened. It does not send remote push notifications or silently download or install updates.
 
 ## Screenshots
 
@@ -44,7 +44,7 @@ The app checks GitHub Releases while open and shows an update link when a newer 
 
 Listening history, taste signals, favorites, playlists, and imported audio are stored on the device. EchoWave has no account system or app analytics backend and does not report listening activity to the project. The update check contacts GitHub's public release endpoint and exposes normal network metadata such as the device IP; see [Privacy](docs/PRIVACY.md).
 
-GitHub exposes aggregate APK asset download counts on each [release](https://github.com/AyushDevHub/EchoWave/releases). These count downloads, not unique people, successful installs, or current users. Since EchoWave has no telemetry, maintainers cannot determine how many people installed or actively use the app. Measuring active use would require collecting and transmitting usage signals; this project does not do that.
+The About screen shows the latest APK's public GitHub download count. This counts downloads, not unique people, successful installs, or current users. EchoWave sends no app-open or listening events to maintainers, so active-use counts are unavailable.
 
 Share feedback or propose a feature through [GitHub Issues](https://github.com/AyushDevHub/EchoWave/issues/new/choose). Do not include personal data, account credentials, cookies, signed URLs, or private listening history in a report.
 

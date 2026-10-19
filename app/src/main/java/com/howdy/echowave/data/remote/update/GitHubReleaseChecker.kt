@@ -62,6 +62,28 @@ object GitHubReleaseChecker {
         }
     }
 
+    /** Public aggregate from GitHub; this does not identify installs or users. */
+    suspend fun latestApkDownloadCount(): Int = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(LATEST_RELEASE_URL)
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "EchoWave-Release-Stats")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("GitHub release stats returned HTTP ${response.code}")
+            val body = response.body?.string() ?: throw IOException("GitHub returned an empty release response")
+            val release = JSONObject(body)
+            val version = release.optString("tag_name").trim().removePrefix("v")
+            val assets = release.optJSONArray("assets") ?: return@withContext 0
+            (0 until assets.length()).mapNotNull { index ->
+                assets.optJSONObject(index)?.takeIf {
+                    it.optString("name") == "EchoWave-$version.apk"
+                }?.optInt("download_count")
+            }.firstOrNull() ?: 0
+        }
+    }
+
     internal fun isNewerVersion(latest: String, installed: String): Boolean {
         fun parts(value: String): List<Int>? {
             val numeric = value.trim().removePrefix("v").substringBefore('-').substringBefore('+')

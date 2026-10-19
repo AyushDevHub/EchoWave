@@ -1,5 +1,9 @@
 package com.howdy.echowave.ui.home
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +57,8 @@ import com.howdy.echowave.ui.components.AppLogo
 import com.howdy.echowave.ui.components.TrackArtwork
 import com.howdy.echowave.ui.update.UpdateStatus
 import com.howdy.echowave.ui.update.UpdateViewModel
+import com.howdy.echowave.ui.update.UpdateNotifier
+import com.howdy.echowave.data.remote.update.LatestAppRelease
 import com.howdy.echowave.ui.theme.DisplayHeadline
 import com.howdy.echowave.ui.theme.capsLabel
 
@@ -76,7 +83,27 @@ fun HomeScreen(
 ) {
     val updateStatus by updateViewModel.status.collectAsState()
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
+    var pendingNotification by remember { mutableStateOf<LatestAppRelease?>(null) }
+    var notificationAttemptedVersion by rememberSaveable { mutableStateOf<String?>(null) }
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) pendingNotification?.let { UpdateNotifier.notifyIfAllowed(context, it) }
+        pendingNotification = null
+    }
     LaunchedEffect(updateViewModel) { updateViewModel.check() }
+    LaunchedEffect(updateStatus) {
+        val release = (updateStatus as? UpdateStatus.Available)?.release ?: return@LaunchedEffect
+        if (notificationAttemptedVersion == release.version) return@LaunchedEffect
+        notificationAttemptedVersion = release.version
+        if (UpdateNotifier.permissionGranted(context)) {
+            UpdateNotifier.notifyIfAllowed(context, release)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingNotification = release
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     var filter by rememberSaveable { mutableStateOf(HomeFilter.FOR_YOU) }
     val mix = remember(recent, favorites) {
