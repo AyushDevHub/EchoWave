@@ -28,6 +28,7 @@ data class TrackCandidate(
     val relevanceScore: Int = 0,
     val tasteScore: Int = 0,
     val publishedAtEpochMs: Long? = null,
+    val recommendationExplanation: RecommendationExplanation? = null,
 )
 
 interface CandidateSource {
@@ -91,9 +92,17 @@ class CandidatePipeline(
             var processed: List<TrackCandidate> = candidates
             filters.forEach { processed = it.apply(context, processed) }
             // Precompute scores once (O(n)) instead of per-comparison O(n log n).
+            val weightedSorter = sorters.filterIsInstance<WeightedRecommendationSorter>().firstOrNull()
             val scored = processed.map { candidate ->
-                val keys = sorters.map { it.score(context, candidate) }
-                candidate to keys
+                val weighted = weightedSorter?.explain(context, candidate)
+                val keys = sorters.map { sorter ->
+                    if (sorter === weightedSorter && weighted != null) {
+                        (weighted.first * 1000f).toLong()
+                    } else {
+                        sorter.score(context, candidate)
+                    }
+                }
+                candidate.copy(recommendationExplanation = weighted?.second) to keys
             }
             val ordered = scored.withIndex().sortedWith(
                 Comparator<IndexedValue<Pair<TrackCandidate, List<Long>>>> { left, right ->
@@ -183,8 +192,8 @@ object FreshnessSorter : CandidateSorter {
 class WeightedRecommendationSorter(
     private val scorer: RecommendationScorer = RecommendationScorer(),
 ) : CandidateSorter {
-    override fun score(context: CandidateContext, candidate: TrackCandidate): Long {
-        val (finalScore, _) = scorer.score(
+    fun explain(context: CandidateContext, candidate: TrackCandidate): Pair<Float, RecommendationExplanation> =
+        scorer.score(
             seed = context.seed,
             candidate = candidate.track,
             session = context.sessionTaste,
@@ -193,6 +202,9 @@ class WeightedRecommendationSorter(
             recentlyPlayedIdentities = context.played,
             queuedArtistsCount = context.queuedArtistsCount,
         )
+
+    override fun score(context: CandidateContext, candidate: TrackCandidate): Long {
+        val (finalScore, _) = explain(context, candidate)
         return (finalScore * 1000f).toLong()
     }
 }

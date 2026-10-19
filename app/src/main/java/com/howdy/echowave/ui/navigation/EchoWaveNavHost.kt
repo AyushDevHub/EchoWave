@@ -10,8 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -54,12 +59,14 @@ import com.howdy.echowave.ui.discover.AlbumDetailScreen
 import com.howdy.echowave.ui.discover.DiscoverViewModel
 import com.howdy.echowave.ui.home.HomeScreen
 import com.howdy.echowave.ui.library.LibraryScreen
+import com.howdy.echowave.ui.listeningsummary.ListeningSummaryScreen
 import com.howdy.echowave.ui.library.LibraryViewModel
 import com.howdy.echowave.ui.onboarding.OnboardingScreen
 import com.howdy.echowave.ui.player.MiniPlayer
 import com.howdy.echowave.ui.player.LyricsViewModel
 import com.howdy.echowave.ui.player.LyricsUiState
 import com.howdy.echowave.ui.player.NowPlayingScreen
+import com.howdy.echowave.ui.recommendations.EchoThisScreen
 import com.howdy.echowave.ui.search.SearchScreen
 import com.howdy.echowave.ui.settings.AboutSettingsScreen
 import com.howdy.echowave.ui.settings.AppearanceScreen
@@ -78,7 +85,6 @@ fun EchoWaveNavHost(controller: PlaybackController) {
     val greetingEnabled by repo.settingsRepo.greetingEnabled.collectAsState(true)
     val musicPreferences by repo.settingsRepo.musicPreferences.collectAsState("")
     val onboardingDone by repo.settingsRepo.onboardingCompleted.collectAsState(null)
-    val playerStyle by repo.settingsRepo.playerStyle.collectAsState(com.howdy.echowave.data.local.PlayerStyle.APPLE)
     val libVm: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory(repo.libraryRepo))
     val favoriteIds by libVm.favoriteIds.collectAsState()
     val history by libVm.history.collectAsState()
@@ -116,7 +122,26 @@ fun EchoWaveNavHost(controller: PlaybackController) {
         return
     }
 
+    Box(Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
+      Box(
+          Modifier.align(Alignment.TopEnd).padding(top = 54.dp, end = 8.dp)
+              .size(280.dp).blur(90.dp)
+              .background(Brush.radialGradient(listOf(
+                  androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                  androidx.compose.ui.graphics.Color.Transparent,
+              )), CircleShape),
+      )
+      Box(
+          Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 64.dp)
+              .size(220.dp).blur(82.dp)
+              .background(Brush.radialGradient(listOf(
+                  androidx.compose.material3.MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+                  androidx.compose.ui.graphics.Color.Transparent,
+              )), CircleShape),
+      )
     Scaffold(
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background.copy(alpha = 0.94f),
+        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onBackground,
         bottomBar = {
             val route = entry?.destination?.route
             if (route != Routes.NOW_PLAYING && route != Routes.ONBOARDING && route != Routes.ONBOARDING_EDIT) Column {
@@ -313,6 +338,23 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     onOpenPlayback = { nav.navigate(Routes.SETTINGS_PLAYBACK) },
                     onOpenAbout = { nav.navigate(Routes.SETTINGS_ABOUT) },
                     onEditTaste = { nav.navigate(Routes.ONBOARDING_EDIT) },
+                    onOpenListeningSummary = { nav.navigate(Routes.LISTENING_SUMMARY) },
+                )
+            }
+            composable(Routes.LISTENING_SUMMARY) {
+                ListeningSummaryScreen(
+                    onBack = { nav.popBackStack() },
+                    summaryRepository = repo.listeningSummaryRepository,
+                    dnaRepository = repo.dnaRepository,
+                    settingsRepository = repo.settingsRepo,
+                )
+            }
+            composable(Routes.ECHO_THIS) {
+                EchoThisScreen(
+                    seed = state.currentTrack,
+                    onBack = { nav.popBackStack() },
+                    recommend = { seed -> controller.recommendations(seed) },
+                    onAddToQueue = { track -> controller.appendToQueue(listOf(track)) },
                 )
             }
             composable(Routes.SETTINGS_APPEARANCE) { AppearanceScreen(onBack = { nav.popBackStack() }) }
@@ -332,7 +374,6 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     onShuffle = controller::setShuffle,
                     onRepeat = controller::setRepeat,
                     onVolume = controller::setVolume,
-                    playerStyle = playerStyle,
                     onRetry = {
                         val s = controller.state.value
                         if (s.queue.isNotEmpty() && s.queueIndex in s.queue.indices) {
@@ -341,10 +382,12 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                     },
                     isFavorite = current?.id in favoriteIds,
                     onToggleFavorite = { current?.let { libVm.toggle(it) } },
+                    onEchoThis = { nav.navigate(Routes.ECHO_THIS) },
                     onPlayQueueAt = { i ->
                         val s = controller.state.value
                         scope.launch { controller.play(s.queue, i) }
                     },
+                    onRefreshQueue = { scope.launch { controller.refreshQueue() } },
                     playlists = playlists,
                     onCreateAndAdd = { name ->
                         if (name.isBlank()) return@NowPlayingScreen
@@ -364,5 +407,6 @@ fun EchoWaveNavHost(controller: PlaybackController) {
                 )
             }
         }
+    }
     }
 }

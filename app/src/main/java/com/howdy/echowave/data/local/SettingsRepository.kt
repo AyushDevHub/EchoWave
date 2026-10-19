@@ -9,12 +9,6 @@ import kotlinx.coroutines.flow.map
 
 enum class Appearance { SYSTEM, DARK, LIGHT }
 
-enum class PlayerStyle(val label: String, val description: String) {
-    CURRENT("Classic", "The default player design"),
-    APPLE("Glow", "Artwork atmosphere with word-timed sing-along"),
-    SPOTIFY("Contrast", "Bold lyrics with a clean, high-contrast player"),
-}
-
 enum class FontChoice(val label: String) {
     SYSTEM("System default"),
     GOOGLE_SANS("Google Sans (system)"),
@@ -66,21 +60,21 @@ class SettingsRepository(
     }
     val displayName: Flow<String> = store.data.map { it[DISPLAY_NAME].orEmpty() }
     val greetingEnabled: Flow<Boolean> = store.data.map { it[GREETING_ENABLED] ?: true }
+    val summaryTimeOfDayEnabled: Flow<Boolean> = store.data.map { it[SUMMARY_TIME_OF_DAY_ENABLED] ?: false }
     val musicPreferences: Flow<String> = store.data.map { it[MUSIC_PREFERENCES].orEmpty() }
     /** True once the first-start onboarding (name + taste) has been completed. */
     val onboardingCompleted: Flow<Boolean> = store.data.map { it[ONBOARDING_COMPLETED] ?: false }
-    val playerStyle: Flow<PlayerStyle> = store.data.map { prefs ->
-        PlayerStyle.entries.firstOrNull { it.name == prefs[PLAYER_STYLE] } ?: PlayerStyle.APPLE
-    }
     val fontChoice: Flow<FontChoice> = store.data.map { prefs ->
         FontChoice.entries.firstOrNull { it.name == prefs[FONT_CHOICE] } ?: FontChoice.SYSTEM
     }
 
     suspend fun setThemePreset(value: ThemePreset) { store.edit { it[THEME_PRESET] = value.name } }
-    suspend fun setPlayerStyle(value: PlayerStyle) { store.edit { it[PLAYER_STYLE] = value.name } }
     suspend fun setFontChoice(value: FontChoice) { store.edit { it[FONT_CHOICE] = value.name } }
     suspend fun setDisplayName(value: String) { store.edit { it[DISPLAY_NAME] = value.trim().take(40) } }
     suspend fun setGreetingEnabled(value: Boolean) { store.edit { it[GREETING_ENABLED] = value } }
+    suspend fun setSummaryTimeOfDayEnabled(value: Boolean) {
+        store.edit { it[SUMMARY_TIME_OF_DAY_ENABLED] = value }
+    }
     suspend fun setMusicPreferences(value: String) { store.edit { it[MUSIC_PREFERENCES] = value.trim().take(120) } }
     suspend fun setOnboardingCompleted(value: Boolean) { store.edit { it[ONBOARDING_COMPLETED] = value } }
 
@@ -90,9 +84,9 @@ class SettingsRepository(
         private val APPEARANCE = stringPreferencesKey("appearance")
         private val THEME_PRESET = stringPreferencesKey("theme_preset")
         private val FONT_CHOICE = stringPreferencesKey("font_choice")
-        private val PLAYER_STYLE = stringPreferencesKey("player_style")
         private val DISPLAY_NAME = stringPreferencesKey("display_name")
         private val GREETING_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("greeting_enabled")
+        private val SUMMARY_TIME_OF_DAY_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("summary_time_of_day_enabled")
         private val MUSIC_PREFERENCES = stringPreferencesKey("music_preferences")
         private val ONBOARDING_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_completed")
     }

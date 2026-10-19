@@ -2,9 +2,12 @@ package com.howdy.echowave
 
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.model.TrackIdentity
+import com.howdy.echowave.domain.dna.MusicDnaProfile
+import com.howdy.echowave.domain.dna.ScoredItem
 import com.howdy.echowave.domain.recommendation.RecommendationScorer
 import com.howdy.echowave.domain.recommendation.SessionTasteTracker
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RecommendationScorerTest {
@@ -68,5 +71,35 @@ class RecommendationScorerTest {
 
         val (score, expl) = scorer.score(seed = seed, candidate = candidate, session = session)
         assertTrue(expl.penalties >= 60f)
+    }
+
+    @Test
+    fun oneListeningEventHasLessDnaInfluenceThanRepeatedEvidence() {
+        val seed = Track("seed", "Calm Ambient", "Seed Artist")
+        val candidate = Track("candidate", "Calm Ambient", "Artist A")
+        val onePlay = MusicDnaProfile(
+            totalEvents = 1,
+            topArtists = listOf(ScoredItem("artist a", "Artist A", 1.0, 1)),
+        )
+        val repeated = MusicDnaProfile(
+            totalEvents = 20,
+            topArtists = listOf(ScoredItem("artist a", "Artist A", 12.0, 20)),
+        )
+
+        val earlySignal = scorer.score(seed, candidate, dnaProfile = onePlay).second.dnaScore
+        val establishedSignal = scorer.score(seed, candidate, dnaProfile = repeated).second.dnaScore
+
+        assertTrue("Repeated evidence should carry more DNA confidence", establishedSignal > earlySignal)
+    }
+
+    @Test
+    fun unexplainedMetadataDoesNotReceiveAFalseFreshMatchReason() {
+        val result = scorer.score(
+            seed = Track("seed", "Track One", "Unknown Performer"),
+            candidate = Track("candidate", "Another Song", "Unknown Artist"),
+        ).second
+
+        assertEquals(20f, result.discoveryScore)
+        assertTrue(result.reasons.single().startsWith("Limited matching metadata"))
     }
 }

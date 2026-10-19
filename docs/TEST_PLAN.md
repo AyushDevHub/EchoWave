@@ -10,6 +10,22 @@ Run from the repository root on Windows:
 .\gradlew.bat test lint assembleDebug
 ```
 
+Listening Summary unit coverage includes calendar period boundaries, the 30-second play rule, completion counts, repeat ranking, script-based language hints, opt-in day-part display, empty history, and the 12-month retained-history limit. Clearing the summary uses the same local history reset that clears Music DNA events/profile; favorites and playlists are unaffected by the implementation path.
+
+Local audio routing unit coverage verifies that app-owned local IDs resolve without invoking the network stream resolver, missing local files fail without network fallback, and remote tracks retain the existing resolver behavior. Device verification should import a user-owned sample through the Android picker, play it with network disabled, seek, remove the imported copy, and verify that ordinary remote playback remains unchanged.
+
+Recommendation unit coverage verifies that one listening event has less Music DNA influence than repeated evidence. Echo This uses the existing candidate pipeline, handles loading/error/empty results, and appends only explicitly selected results. Device verification should confirm candidate review leaves current playback and queue intact until Add is tapped; no provider result is guaranteed when the current catalog source is unavailable.
+
+Recommendation explanation coverage checks that matching style, local Music DNA artist evidence, and favorite status appear as reasons when those signals participate in scoring. Listening Summary now displays the aggregate Music DNA profile, distinguishes an empty/early profile from an established one, respects the day-part display opt-in, and omits unavailable genre claims.
+
+Unknown-metadata ranking coverage verifies candidates do not receive the freshness boost without a positive style, language, or era match, and that the explanation reports limited metadata instead of inventing a reason.
+
+The completed Music DNA transparency increment passed `test` (171 tests across 34 suites; 0 failures/errors), `lint` (0 errors, 46 warnings, 3 hints), `assembleDebug`, and `assembleRelease`. On the Moto G96 5G (Android 16), the signed release displayed the artist/language profile and did not display the time-derived "Late-night listener" pattern with the time-of-day switch off. Echo This displayed specific DNA reasons where present and disclosed limited matching metadata for other candidates. No EchoWave fatal exception appeared in the captured log scan. The playback session was paused after checking. APK SHA-256: `AE55FFE895BFB7939D65ED2031801D1555CD9690173275BBE1BBB2295F88700E`.
+
+## Music DNA and Echo This check (2026-10-20)
+
+`test lint assembleDebug assembleRelease` completed successfully for this increment. The unit suite passed 169 tests across 34 suites with no failures/errors. Lint reported 0 errors, 46 warnings, and 3 hints. The Moto G96 5G running Android 16 installed the signed release in place with the existing certificate. Echo This opened for the playing "Beedi" seed and displayed ranked candidate tracks. Tapping Add changed that row to Added while the Now Playing mini-player continued to show "Beedi"; the active track was not replaced. Playback was returned to Beedi and paused after the check. The UI showed real candidates from the existing catalog source; this does not establish provider authorization or verify personalized ranking quality across listening histories. No EchoWave fatal exception appeared in the captured log scan. Release APK SHA-256: `83773334450C5A420EAE64937CA11E4DA57E90C80580E72AABA3E2473268A9F1`.
+
 For a release candidate, also run:
 
 ```powershell
@@ -52,6 +68,14 @@ The phone also reported an unrelated Bluetooth media session in `ERROR` state (�
 Automated checks for the 1.0.1 candidate source completed on 2026-10-10: `test lint assembleRelease bundleRelease` succeeded. Lint reported 49 warnings and 2 hints with no errors; review the generated `app/build/reports/lint-results-debug.html` before treating lint as clean. The signed release APK and AAB were signature-verified locally. Release-mode on-device behavior remains unverified.
 
 The current source checkout was rechecked on 2026-10-10 with `test lint assembleDebug`. The forced `test --rerun-tasks` execution passed 159 tests across 31 test suites with no failures or errors. Lint completed with 0 errors, 49 warnings, and 2 hints; the warnings remain to be reviewed. The build emitted Kotlin/JDK target fallback warnings (the installed JDK target is newer than Kotlin's supported target); these are build-toolchain warnings, not proof that runtime behavior is correct. The debug APK installed on the connected Moto G96 5G and its launcher activity came to the foreground. This was a launch smoke check only; it does not replace the release-mode device regression matrix or verify network playback.
+
+## Local audio import implementation check (2026-10-20)
+
+On the Moto G96 5G running Android 16, installed the signed release APK over the previous installation after verifying the signer certificate matched; app data was preserved. The Library's On device tab and empty state opened. Imported a self-generated WAV test tone using the Android system picker. With Wi-Fi and mobile data disabled, the EchoWave Media3 session reported `PLAYING` for the local track. Removed the imported app-folder copy in EchoWave and removed the test source file from phone Downloads; the tab returned to its empty state. Restored Wi-Fi and mobile data to their originally enabled state. A captured log scan showed no EchoWave fatal exception. This verifies the basic picker/import/play-while-offline/delete path only; it does not verify large-file handling, process restart, seek behavior, or every supported codec. No personal or third-party audio was opened or copied.
+
+## Listening Summary implementation check (2026-10-20)
+
+`test` passed 165 unit tests across 33 test suites. `lint` completed with 0 errors, 46 warnings, and 2 hints; warnings remain for review. `assembleDebug` and `assembleRelease` both succeeded. The release APK signer certificate matched the installed app before `adb install -r`; the update preserved existing app data. On the Moto G96 5G running Android 16, the Listening Summary screen opened and displayed locally recorded listening time, play/completion totals, artist and track rankings, and empty states for repeat/new-artist sections. The singular count rendered as “1 play.” The optional time-of-day view remained off. Captured logs contained no EchoWave fatal exception. This was a screen smoke check: period changes, clearing data, time-of-day opt-in, playback accounting, and network/offline playback were not exercised. The final release APK SHA-256 was `3305B74F76D9C060F2C5CD63A4AA44314AE95857ED40CA0A821E499394BC2ACE`.
 
 After removing the unused MP3 files, `test lint assembleRelease` was rerun on 2026-10-10 and succeeded. The fresh unit run again passed 159 tests in 31 suites. Lint reported 0 errors, 46 warnings, and 2 hints. `app-release.apk` verified with `apksigner`; its certificate SHA-256 matches the v1.0.0 APK certificate (`08584910f251a6edab224f11f765868e3a4eb92ffb03a3b47894fcb10dd35374`). The release APK archive contains none of the three removed MP3 resources. APK SHA-256: `F388B52ADA3E1D7DAEE0A49710BDCCD290509CB019846A5650D56A193FD27C20`. This release build has not been installed on a device or published; the provider authorization gate remains open.
 

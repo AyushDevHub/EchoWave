@@ -10,6 +10,8 @@ import androidx.room.Room
 import com.howdy.echowave.data.local.EchoWaveDb
 import com.howdy.echowave.data.local.SearchHistoryRepository
 import com.howdy.echowave.data.local.SettingsRepository
+import com.howdy.echowave.data.local.ListeningSummaryRepositoryImpl
+import com.howdy.echowave.data.local.LocalAudioRepositoryImpl
 import com.howdy.echowave.data.remote.fallback.BravePipeFallbackResolver
 import com.howdy.echowave.data.remote.fallback.NewPipeFallbackResolver
 import com.howdy.echowave.data.remote.innertube.InnerTubeMusicSource
@@ -29,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.howdy.echowave.data.repository.MusicRepositoryImpl
+import com.howdy.echowave.domain.repository.LocalAudioRepository
 import com.howdy.echowave.domain.source.ChainedStreamResolver
 import com.howdy.echowave.playback.Media3PlaybackController
 
@@ -109,11 +112,15 @@ class AppContainer(ctx: Context) {
         poTokens.prewarm()
     }
 
-    val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver) }
+    val localAudioRepo: LocalAudioRepository by lazy { LocalAudioRepositoryImpl(appCtx) }
+    val musicRepo by lazy { MusicRepositoryImpl(musicSource, streamResolver, localAudioRepo) }
     val discoveryRepo by lazy { DiscoveryRepositoryImpl(innerTubeApi, visitorStore) }
     val libraryRepo by lazy { LibraryRepositoryImpl(db.trackDao(), db.playlistDao()) }
     val dnaRepository by lazy {
         com.howdy.echowave.data.dna.DnaRepositoryImpl(db.listeningEventDao(), prefs, scope)
+    }
+    val listeningSummaryRepository by lazy {
+        ListeningSummaryRepositoryImpl(db.listeningEventDao())
     }
     val historyRepo by lazy { SearchHistoryRepository(prefs) }
     val lyricsRepo by lazy { LyricsRepository() }

@@ -15,6 +15,7 @@ interface ListeningEventRecorder {
 /**
  * Music DNA store: raw events (12-month TTL) -> decayed aggregate snapshot.
  * Consumers (Echo This, recommendations) observe the profile, never raw rows.
+ * When disabled, profile reads return an empty profile and new events are ignored.
  */
 interface DnaRepository : ListeningEventRecorder {
     fun observeProfile(): Flow<MusicDnaProfile>

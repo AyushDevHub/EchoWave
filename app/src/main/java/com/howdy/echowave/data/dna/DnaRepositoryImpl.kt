@@ -40,30 +40,41 @@ class DnaRepositoryImpl(
     private val recomputeMutex = Mutex()
 
     override fun observeProfile(): Flow<MusicDnaProfile> =
-        prefs.data.map { decode(it[DNA_JSON]) }
+        prefs.data.map { preferences ->
+            if (preferences[DNA_ENABLED] == false) MusicDnaProfile.empty(clock())
+            else decode(preferences[DNA_JSON])
+        }
 
-    override suspend fun currentProfile(): MusicDnaProfile =
-        decode(prefs.data.first()[DNA_JSON])
+    override suspend fun currentProfile(): MusicDnaProfile {
+        val preferences = prefs.data.first()
+        return if (preferences[DNA_ENABLED] == false) MusicDnaProfile.empty(clock())
+        else decode(preferences[DNA_JSON])
+    }
 
     override fun observeEnabled(): Flow<Boolean> =
         prefs.data.map { it[DNA_ENABLED] ?: true }
 
     override suspend fun setEnabled(enabled: Boolean) {
-        prefs.edit { it[DNA_ENABLED] = enabled }
+        recomputeMutex.withLock {
+            prefs.edit { it[DNA_ENABLED] = enabled }
+        }
     }
 
     override suspend fun record(event: ListeningEvent) {
-        if (prefs.data.first()[DNA_ENABLED] == false) return
-        events.insert(event.toEntity())
-        // Atomic increment via updateData: concurrent records can't lose counts.
-        prefs.edit { prefs ->
-            val since = prefs[EVENTS_SINCE_RECOMPUTE] ?: 0
-            prefs[EVENTS_SINCE_RECOMPUTE] = since + 1
+        val shouldRecompute = recomputeMutex.withLock {
+            if (prefs.data.first()[DNA_ENABLED] == false) return
+            events.insert(event.toEntity())
+            // Atomic increment via updateData: concurrent records can't lose counts.
+            prefs.edit { preferences ->
+                val since = preferences[EVENTS_SINCE_RECOMPUTE] ?: 0
+                preferences[EVENTS_SINCE_RECOMPUTE] = since + 1
+            }
+            val snapshot = prefs.data.first()
+            val next = snapshot[EVENTS_SINCE_RECOMPUTE] ?: 0
+            val last = snapshot[DNA_UPDATED] ?: 0L
+            next >= RECOMPUTE_EVERY || clock() - last > RECOMPUTE_MAX_STALE_MS
         }
-        val snapshot = prefs.data.first()
-        val next = snapshot[EVENTS_SINCE_RECOMPUTE] ?: 0
-        val last = snapshot[DNA_UPDATED] ?: 0L
-        if (next >= RECOMPUTE_EVERY || clock() - last > RECOMPUTE_MAX_STALE_MS) {
+        if (shouldRecompute) {
             scope.launch {
                 runCatching { recompute() }
             }
@@ -90,11 +101,13 @@ class DnaRepositoryImpl(
     }
 
     override suspend fun clearAll() {
-        events.clear()
-        prefs.edit {
-            it.remove(DNA_JSON)
-            it.remove(DNA_UPDATED)
-            it[EVENTS_SINCE_RECOMPUTE] = 0
+        recomputeMutex.withLock {
+            events.clear()
+            prefs.edit {
+                it.remove(DNA_JSON)
+                it.remove(DNA_UPDATED)
+                it[EVENTS_SINCE_RECOMPUTE] = 0
+            }
         }
     }
 

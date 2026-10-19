@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Pre-flight URL check mirroring the media request (donor: validateStatus).
- * HEAD with the exact first-chunk Range ExoPlayer will ask for, dressed
- * with the minting client's headers. Never throws.
+ * GET with a byte range, dressed with the minting client's headers. Some
+ * media hosts reject HEAD even when the same ranged GET is playable. Never throws.
  */
 class StreamProbe(
     private val http: OkHttpClient = OkHttpClient.Builder()
@@ -34,13 +34,15 @@ class StreamProbe(
             url.toHttpUrlOrNull()?.queryParameter("clen")?.toLongOrNull()?.takeIf { it > 0 }
         }.getOrNull()
         val range = if (total != null && total > 0) {
-            "bytes=${total - 1}-$total"
+            // HTTP byte-range endpoints are inclusive. Keep the probe inside
+            // the resource; asking for `total` is one byte beyond its end.
+            "bytes=${total - 1}-${total - 1}"
         } else {
             "bytes=0-${PROBE_BYTES - 1}"
         }
         android.util.Log.d("EchoWaveProbe", "probe range=$range clenKnown=${total != null}")
         try {
-            val req = Request.Builder().head().url(url)
+            val req = Request.Builder().get().url(url)
                 .header("Range", range)
                 .apply { headers.forEach { (k, v) -> header(k, v) } }
                 .build()

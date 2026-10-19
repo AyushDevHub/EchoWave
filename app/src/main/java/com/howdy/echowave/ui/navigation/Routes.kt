@@ -9,6 +9,8 @@ object Routes {
     const val SETTINGS_APPEARANCE = "settings_appearance"
     const val SETTINGS_PLAYBACK = "settings_playback"
     const val SETTINGS_ABOUT = "settings_about"
+    const val LISTENING_SUMMARY = "listening_summary"
+    const val ECHO_THIS = "echo_this"
     const val CHARTS = "charts"
     const val ONBOARDING = "onboarding"
     const val ONBOARDING_EDIT = "onboarding_edit"

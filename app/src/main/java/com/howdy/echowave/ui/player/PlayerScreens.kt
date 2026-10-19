@@ -3,7 +3,6 @@ package com.howdy.echowave.ui.player
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.spring
@@ -23,6 +22,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
@@ -53,12 +55,14 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
@@ -68,10 +72,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +87,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -101,7 +108,6 @@ import com.howdy.echowave.core.common.formatDuration
 import com.howdy.echowave.data.remote.lyrics.LrcLine
 import com.howdy.echowave.domain.model.PlaybackState
 import com.howdy.echowave.domain.model.RepeatMode
-import com.howdy.echowave.data.local.PlayerStyle
 import com.howdy.echowave.ui.components.TrackArtwork
 import com.howdy.echowave.ui.components.TrackRow
 import com.howdy.echowave.ui.home.waveformBars
@@ -117,36 +123,25 @@ fun MiniPlayer(
 ) {
     val track = state.currentTrack
     if (track == null) {
-        // Keep layout stable when nothing is playing; show buffering/error
-        // instead of collapsing the bottom bar.
-        if (state.isBuffering || state.error != null) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (state.isBuffering) {
-                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.size(12.dp))
-                        Text("Loading…", style = MaterialTheme.typography.bodyMedium)
-                    } else {
-                        Text(
-                            state.error ?: "Nothing playing",
-                            Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+        // Keep the bottom chrome at the same height before and after a track starts.
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 14.dp, vertical = 4.dp),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (state.isBuffering) androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                else Icon(Icons.Default.MusicNote, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(10.dp))
+                Text(
+                    state.error ?: if (state.isBuffering) "Loading…" else "Not playing",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         return
@@ -155,16 +150,16 @@ fun MiniPlayer(
         (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
     } else 0f
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         tonalElevation = 8.dp,
         shadowElevation = 12.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp).height(58.dp),
     ) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onOpen)
-                .padding(start = 10.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+            Modifier.fillMaxWidth().height(58.dp).clickable(onClick = onOpen)
+                .padding(start = 10.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val progressColor = MaterialTheme.colorScheme.primary
@@ -192,7 +187,7 @@ fun MiniPlayer(
                     )
                 }
             }
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(
@@ -231,15 +226,33 @@ fun NowPlayingScreen(
     onRetry: () -> Unit = {},
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
+    onEchoThis: () -> Unit = {},
     onPlayQueueAt: (Int) -> Unit = {},
+    onRefreshQueue: () -> Unit = {},
     playlists: List<com.howdy.echowave.domain.model.Playlist> = emptyList(),
     onCreateAndAdd: (String) -> Unit = {},
     onAddToPlaylist: (Long) -> Unit = {},
     lyrics: LyricsUiState = LyricsUiState(),
     onRetryLyrics: () -> Unit = {},
-    playerStyle: PlayerStyle = PlayerStyle.APPLE,
     onBack: () -> Unit = {},
 ) {
+    val lyricPositionMs by produceState(
+        initialValue = state.positionMs,
+        key1 = state.positionMs,
+        key2 = state.isPlaying,
+    ) {
+        if (state.isPlaying) {
+            val basePositionMs = state.positionMs
+            val anchorFrameNanos = withFrameNanos { it }
+            while (true) {
+                withFrameNanos { frameNanos ->
+                    value = basePositionMs + (frameNanos - anchorFrameNanos).coerceAtLeast(0L) / 1_000_000L
+                }
+            }
+        } else {
+            value = state.positionMs
+        }
+    }
     var queueOpen by rememberSaveable { mutableStateOf(false) }
     var lyricsOpen by rememberSaveable { mutableStateOf(false) }
     var addOpen by rememberSaveable { mutableStateOf(false) }
@@ -256,49 +269,24 @@ fun NowPlayingScreen(
             if (requestedMs in 0L..lastSafePosition) onSeek(requestedMs)
         }
     }
-    // Own ambient theme: artwork feeds a deep gradient wash plus a soft
-    // primary glow that breathes while playing (EchoMusic/Apple-inspired,
-    // own implementation, no copied code or assets).
-    val glow by animateFloatAsState(
-        targetValue = if (state.isPlaying) 1f else 0.55f,
-        animationSpec = tween(900),
-        label = "playerGlow",
-    )
-    Box(Modifier.fillMaxSize()) {
-        if (track != null && playerStyle != PlayerStyle.SPOTIFY) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (track != null) {
             TrackArtwork(
                 url = track.artworkUrl,
                 description = null,
-                modifier = Modifier.fillMaxSize().blur(if (playerStyle == PlayerStyle.APPLE) 52.dp else 0.dp),
+                modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { alpha = 0.34f },
                 contentScale = ContentScale.Crop,
             )
-            Box(Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        (if (playerStyle == PlayerStyle.APPLE) Color(0xFF16062D) else MaterialTheme.colorScheme.background).copy(alpha = 0.50f),
-                        Color(0xFF09090D).copy(alpha = if (playerStyle == PlayerStyle.APPLE) 0.82f else 0.94f),
-                    ),
-                ),
-            ))
             Box(
-                Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter).background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.22f * glow),
-                            Color.Transparent,
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.42f),
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.68f),
                         ),
                     ),
                 ),
             )
-            if (playerStyle == PlayerStyle.APPLE) AppleLyricBackdrop(
-                lyrics = lyrics,
-                positionMs = state.positionMs,
-                modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top = 84.dp),
-            )
-        } else if (track != null) {
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                listOf(Color(0xFF171717), Color(0xFF090909)),
-            )))
         }
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(
@@ -309,9 +297,9 @@ fun NowPlayingScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to EchoWave")
             }
             Column(Modifier.weight(1f)) {
-                Text("NOW PLAYING", style = MaterialTheme.typography.labelMedium,
+                Text("Now Playing", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(track?.album ?: "E C H O W A V E", style = MaterialTheme.typography.bodySmall,
+                Text(track?.album?.takeIf { it.isNotBlank() && it != "&" } ?: track?.artist.orEmpty(), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
             }
@@ -338,12 +326,13 @@ fun NowPlayingScreen(
                 onRetry = onRetry,
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
+                onEchoThis = onEchoThis,
                 onAddToPlaylist = { addOpen = true },
                 lyrics = lyrics,
+                lyricPositionMs = lyricPositionMs,
                 onOpenLyrics = { lyricsOpen = true },
                 onLyricTap = seekFromLyrics,
                 onRetryLyrics = onRetryLyrics,
-                playerStyle = playerStyle,
             )
         }
         }
@@ -363,12 +352,11 @@ fun NowPlayingScreen(
         FullscreenLyrics(
             track = track,
             state = lyrics,
-            positionMs = state.positionMs,
+            positionMs = lyricPositionMs,
             durationMs = state.durationMs,
             onSeek = seekFromLyrics,
             onBack = { lyricsOpen = false },
             onRetry = onRetryLyrics,
-            playerStyle = playerStyle,
         )
     }
 
@@ -379,8 +367,19 @@ fun NowPlayingScreen(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                Text("Up next", style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Up next", style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f))
+                    IconButton(onClick = onRefreshQueue, enabled = !state.isLoadingNext && track != null) {
+                        if (state.isLoadingNext) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.Refresh, contentDescription = "Refresh queue")
+                    }
+                }
+                state.nextTracksMessage?.let { message ->
+                    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                }
                 if (state.queue.isEmpty()) {
                     Text("Your queue is empty.", color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
@@ -408,34 +407,6 @@ fun NowPlayingScreen(
 }
 
 @Composable
-private fun AppleLyricBackdrop(
-    lyrics: LyricsUiState,
-    positionMs: Long,
-    modifier: Modifier = Modifier,
-) {
-    val lines = lyrics.lines
-    if (lyrics.loading || lines.isNullOrEmpty()) return
-    val active = com.howdy.echowave.data.remote.lyrics.currentLrcIndex(lines, positionMs)
-        .takeIf { it >= 0 } ?: return
-    val line = lines.getOrNull(active) ?: return
-    AnimatedContent(
-        targetState = line.text,
-        transitionSpec = { fadeIn(tween(450)) togetherWith fadeOut(tween(300)) },
-        label = "backdropLyric",
-        modifier = modifier,
-    ) { text ->
-        Text(
-            text,
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        )
-    }
-}
-
-@Composable
 private fun PlayerPage(
     state: PlaybackState,
     onToggle: () -> Unit,
@@ -448,47 +419,50 @@ private fun PlayerPage(
     onRetry: () -> Unit,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
+    onEchoThis: () -> Unit = {},
     onAddToPlaylist: () -> Unit = {},
     lyrics: LyricsUiState,
+    lyricPositionMs: Long,
     onOpenLyrics: () -> Unit,
     onLyricTap: (Long) -> Unit,
     onRetryLyrics: () -> Unit,
-    playerStyle: PlayerStyle = PlayerStyle.APPLE,
 ) {
     val track = state.currentTrack ?: return
-    Column(
-        Modifier.fillMaxSize().padding(bottom = 28.dp),
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+      val coverSize = minOf(maxWidth * 0.76f, (maxHeight * 0.36f).coerceAtLeast(176.dp))
+      Column(
+        Modifier.fillMaxSize().padding(bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (state.isBuffering) {
-            Text("Finding your sound…", style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-        }
-        if (state.isLoadingNext) {
-            Text("Finding next songs…", style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-        }
-        state.nextTracksMessage?.let { message ->
-            Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                Text(message, Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        state.error?.let { error ->
-            Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                Row(Modifier.padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(error, Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onRetry) { Text("Retry") }
+        // Keep the artwork and controls anchored while playback status changes.
+        // A fixed slot prevents loading, queue, and error messages from resizing the player.
+        Box(Modifier.fillMaxWidth().height(40.dp), contentAlignment = Alignment.CenterStart) {
+            when {
+                state.error != null -> Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(state.error, Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        TextButton(onClick = onRetry) { Text("Retry") }
+                    }
                 }
+                state.nextTracksMessage != null -> Text(
+                    state.nextTracksMessage,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                state.isBuffering || state.isLoadingNext -> Text(
+                    if (state.isBuffering) "Loading…" else "Finding next songs…",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
-
-        Spacer(Modifier.height(6.dp))
         var dragDistance by remember(track.id) { mutableStateOf(0f) }
         val coverOffset by animateFloatAsState(
             targetValue = dragDistance,
@@ -499,7 +473,7 @@ private fun PlayerPage(
             targetState = track,
             transitionSpec = { fadeIn(tween(320)) togetherWith fadeOut(tween(220)) },
             label = "albumCoverTransition",
-            modifier = Modifier.fillMaxWidth(0.78f).aspectRatio(1f)
+            modifier = Modifier.width(coverSize).aspectRatio(1f)
                 .shadow(28.dp, RoundedCornerShape(28.dp), ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
                 .clip(RoundedCornerShape(28.dp))
                 .graphicsLayer {
@@ -530,7 +504,7 @@ private fun PlayerPage(
                 contentScale = ContentScale.Crop,
             )
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -544,23 +518,24 @@ private fun PlayerPage(
                     contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (isFavorite) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            IconButton(onClick = onEchoThis) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = "Echo This: find similar music")
+            }
             IconButton(onClick = onAddToPlaylist) {
                 Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
             }
         }
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(12.dp))
         LyricsPreview(
             state = lyrics,
-            positionMs = state.positionMs,
+            positionMs = lyricPositionMs,
             durationMs = state.durationMs,
             onOpen = onOpenLyrics,
             onSeek = onLyricTap,
             onRetry = onRetryLyrics,
-            playerStyle = playerStyle,
         )
-        Spacer(Modifier.height(8.dp))
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(6.dp))
         PlaybackScrubber(
             positionMs = state.positionMs,
             durationMs = state.durationMs,
@@ -616,7 +591,8 @@ private fun PlayerPage(
 
         Spacer(Modifier.height(8.dp))
         VolumeSlider(volume = state.volume, onVolume = onVolume)
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(8.dp))
+    }
     }
 }
 
@@ -708,7 +684,6 @@ private fun LyricsPreview(
     onOpen: () -> Unit,
     onSeek: (Long) -> Unit,
     onRetry: () -> Unit,
-    playerStyle: PlayerStyle = PlayerStyle.APPLE,
 ) {
     val lines = state.lines
     val activeIndex = lines?.let {
@@ -722,7 +697,7 @@ private fun LyricsPreview(
     // Fixed height: line flips crossfade inside these bounds, so the
     // scrubber and volume below never bounce when lyrics grow.
     Column(
-        Modifier.fillMaxWidth().height(176.dp)
+        Modifier.fillMaxWidth().height(104.dp)
             .clickable(onClick = onOpen)
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.Center,
@@ -739,24 +714,15 @@ private fun LyricsPreview(
             else -> {
                 // 1 past + active + 2 next: active leads, upcoming drifts
                 // in blurred until their turn (own implementation).
-                val indices = (-1..2).map { previewIndex + it }
+                val indices = (-1..1).map { previewIndex + it }
                     .filter { it in lines.indices }
                 Column(
                     Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     indices.forEach { idx ->
                         val line = lines[idx]
                         val distance = (idx - previewIndex).coerceAtLeast(0)
-                        val lineBlur by animateDpAsState(
-                            targetValue = when (distance) {
-                                0 -> 0.dp
-                                1 -> 2.dp
-                                else -> 5.dp
-                            },
-                            animationSpec = tween(400),
-                            label = "previewLyricBlur",
-                        )
                         val lineAlpha by animateFloatAsState(
                             targetValue = when {
                                 idx < previewIndex -> 0.45f
@@ -764,12 +730,12 @@ private fun LyricsPreview(
                                 distance == 1 -> 0.6f
                                 else -> 0.38f
                             },
-                            animationSpec = tween(400),
+                            animationSpec = tween(90),
                             label = "previewLyricAlpha",
                         )
                         val lineScale by animateFloatAsState(
                             targetValue = if (idx == previewIndex) 1.08f else 0.96f,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                            animationSpec = tween(100),
                             label = "previewLyricScale",
                         )
                         Box(
@@ -778,8 +744,7 @@ private fun LyricsPreview(
                                     alpha = lineAlpha
                                     scaleX = lineScale
                                     scaleY = lineScale
-                                }
-                                .blur(lineBlur),
+                                },
                         ) {
                             AppleLyricLine(
                                 line = line,
@@ -841,11 +806,8 @@ internal fun AppleLyricLine(
             val isActiveWord = active && wordIndex == activeWord
             val isPast = active && wordIndex < activeWord
             val scale by animateFloatAsState(
-                targetValue = if (isActiveWord) 1.14f else 1f,
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessMedium,
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                ),
+                targetValue = if (isActiveWord) 1.07f else 1f,
+                animationSpec = tween(55),
                 label = "karaokeWordScale",
             )
             val alpha by animateFloatAsState(
@@ -855,7 +817,7 @@ internal fun AppleLyricLine(
                     active -> 0.55f
                     else -> 0.4f
                 },
-                animationSpec = tween(180),
+                animationSpec = tween(50),
                 label = "karaokeWordAlpha",
             )
             val wordColor by animateColorAsState(
@@ -864,14 +826,18 @@ internal fun AppleLyricLine(
                     isPast -> sung
                     else -> dim
                 },
-                animationSpec = tween(260),
+                animationSpec = tween(45),
                 label = "karaokeWordColor",
             )
             val content = remember(word.text, isActiveWord, isPast, active, wordColor) {
                 buildAnnotatedString {
                     when {
                         isActiveWord -> withStyle(
-                            SpanStyle(color = wordColor, fontWeight = FontWeight.Bold),
+                            SpanStyle(
+                                color = wordColor,
+                                fontWeight = FontWeight.Bold,
+                                shadow = Shadow(wordColor.copy(alpha = 0.92f), Offset.Zero, 18f),
+                            ),
                         ) { append(word.text) }
                         isPast -> withStyle(
                             SpanStyle(color = wordColor, fontWeight = FontWeight.SemiBold),
@@ -906,7 +872,6 @@ private fun FullscreenLyrics(
     onSeek: (Long) -> Unit = {},
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    playerStyle: PlayerStyle = PlayerStyle.APPLE,
 ) {
     val lines = state.lines
     val activeIndex = lines?.let {
@@ -934,22 +899,20 @@ private fun FullscreenLyrics(
             ),
         ),
     ) {
-        if (playerStyle == PlayerStyle.APPLE) {
-            TrackArtwork(
-                url = track.artworkUrl,
-                description = null,
-                modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { alpha = 0.46f },
-                contentScale = ContentScale.Crop,
-            )
-            Box(Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.48f),
-                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.88f),
-                    ),
+        TrackArtwork(
+            url = track.artworkUrl,
+            description = null,
+            modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { alpha = 0.46f },
+            contentScale = ContentScale.Crop,
+        )
+        Box(Modifier.fillMaxSize().background(
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.scrim.copy(alpha = 0.48f),
+                    MaterialTheme.colorScheme.scrim.copy(alpha = 0.88f),
                 ),
-            ))
-        }
+            ),
+        ))
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
             Row(
                 Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 20.dp),
@@ -986,8 +949,8 @@ private fun FullscreenLyrics(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 48.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(26.dp),
+                    contentPadding = PaddingValues(top = 28.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     itemsIndexed(lines, key = { index, line -> "${line.ms}-${line.text.hashCode()}-$index" }) { index, line ->
                         val active = index == activeIndex || activeIndex < 0 && index == 0
@@ -1001,7 +964,7 @@ private fun FullscreenLyrics(
                         )
                         val alpha by animateFloatAsState(
                             targetValue = if (active) 1f else 0.45f,
-                            animationSpec = tween(350),
+                            animationSpec = tween(100),
                             label = "fullscreenLyricAlpha",
                         )
                         Box(Modifier.fillMaxWidth().graphicsLayer {
@@ -1019,7 +982,7 @@ private fun FullscreenLyrics(
                                 ),
                                 durationMs = durationMs,
                                 onSeek = onSeek,
-                                karaoke = playerStyle != PlayerStyle.SPOTIFY,
+                                karaoke = true,
                             )
                         }
                     }

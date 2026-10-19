@@ -6,10 +6,12 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.data.playback.ChunkedDataSource
 import com.howdy.echowave.data.playback.DressedDataSource
 import com.howdy.echowave.data.playback.MediaCacheManager
+import com.howdy.echowave.data.playback.LocalAwareDataSource
 
 /**
  * Background playback + notification + lock-screen come from this service.
@@ -32,6 +34,10 @@ class PlaybackService : MediaSessionService() {
             .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
         val cached = MediaCacheManager.createCacheDataSourceFactory(this, chunked)
+        val routedDataSource = LocalAwareDataSource.Factory(
+            remoteFactory = cached,
+            localFactory = DefaultDataSource.Factory(this),
+        )
         // A seek invalidates the forward buffer. Keep the rebuffer threshold
         // short so a sparse range read can resume as soon as playable audio is
         // available instead of waiting for the much larger default threshold.
@@ -44,7 +50,7 @@ class PlaybackService : MediaSessionService() {
             )
             .build()
         val player = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(cached))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(routedDataSource))
             .setLoadControl(loadControl)
             .setAudioAttributes(audio, true)
             .build()

@@ -11,7 +11,6 @@ import com.howdy.echowave.domain.repository.MusicRepository
 import com.howdy.echowave.domain.source.StreamInfo
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 private class FakeMusic(private val good: Set<String>) : MusicRepository {
@@ -49,14 +48,14 @@ class AdvanceSkipTest {
         ctlLog = { _, _, _ -> }
     }
 
-    @Test fun `next skips unplayable to playable`() = runBlocking {
+    @Test fun `next stops on the adjacent unavailable track instead of racing through queue`() = runBlocking {
         val c = Media3PlaybackController(FakeMusic(setOf("g")), FakeLibrary())
         // Seed queue via direct tap on first (bad -> error surfaces, no skip).
         c.play(listOf(track("b0"), track("bad"), track("g")))
         assertEquals("b0", c.state.value.currentTrack?.id)
         c.advancePlay(1)
-        assertEquals("g", c.state.value.currentTrack?.id)
-        assertNull(c.state.value.error)
+        assertEquals("bad", c.state.value.currentTrack?.id)
+        assertEquals("unavailable", c.state.value.error)
     }
 
     @Test fun `all bad leaves last error`() = runBlocking {

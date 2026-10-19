@@ -49,6 +49,9 @@ class SettingsRepositoryTest {
         assertEquals("Asta", repository.displayName.first())
         assertEquals(false, repository.greetingEnabled.first())
         assertEquals("Hindi, Bhojpuri, Indie", repository.musicPreferences.first())
+        assertEquals(false, repository.summaryTimeOfDayEnabled.first())
+        repository.setSummaryTimeOfDayEnabled(true)
+        assertEquals(true, repository.summaryTimeOfDayEnabled.first())
     }
 
     @Test fun `onboarding flag defaults false then persists true`() = runBlocking {

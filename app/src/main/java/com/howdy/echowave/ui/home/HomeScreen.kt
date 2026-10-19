@@ -208,7 +208,15 @@ fun HomeScreen(
             }
         } else {
             item {
-                SectionHeader("Playlists for where you're headed", onSeeAll = null)
+                SectionHeader(
+                    when (filter) {
+                        HomeFilter.FOR_YOU -> "Recent"
+                        HomeFilter.FAVORITES -> "Favorites"
+                        HomeFilter.HISTORY -> "History"
+                        HomeFilter.ARTISTS -> "Artists"
+                    },
+                    onSeeAll = null,
+                )
             }
             item {
                 LazyRow(
@@ -245,7 +253,7 @@ fun HomeScreen(
             }
         }
         if (personalizedTracks.isNotEmpty() || preferenceLoading) {
-            item { SectionHeader("Picked for you${if (displayName.isNotBlank()) " · taste-led" else ""}") }
+            item { SectionHeader("For you") }
             item {
                 if (preferenceLoading && personalizedTracks.isEmpty()) {
                     Text("Finding your kind of sound…", color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -401,7 +409,7 @@ private fun HeroCard(
         ))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp)) {
             Text(
-                if (isCurrent) "NOW PLAYING · MADE FOR YOUR MOMENT" else "UP NEXT · IN YOUR QUEUE",
+                if (isCurrent) "NOW PLAYING" else "UP NEXT",
                 style = capsLabel(MaterialTheme.typography.labelSmall),
                 color = Color.White.copy(alpha = 0.78f))
             Spacer(Modifier.height(6.dp))
@@ -444,6 +452,7 @@ private fun PlaylistCard(track: Track, onClick: () -> Unit) {
         Text(
             track.title,
             style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

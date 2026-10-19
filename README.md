@@ -4,46 +4,59 @@
 [![Latest release](https://img.shields.io/github/v/release/AyushDevHub/EchoWave)](https://github.com/AyushDevHub/EchoWave/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-EchoWave is a free, independent Android YouTube Music client. The project does not sell the app. It is built with Kotlin, Jetpack Compose, and AndroidX Media3 and includes search and discovery, local playlists and favorites, listening history, lyrics, background playback controls, personal themes, and a compact player. It is not affiliated with or endorsed by YouTube or Google.
+EchoWave is an independent Android music player built with Kotlin, Jetpack Compose, and AndroidX Media3. It brings search, discovery, radio-style queues, lyrics, playlists, local audio, and on-device listening insights together in one app. EchoWave is free and open source under GPL-3.0. It is not affiliated with or endorsed by YouTube, Google, or Spotify.
 
 ## Download
 
-The current public APK is on the [GitHub Releases page](https://github.com/AyushDevHub/EchoWave/releases/latest). Release notes include installation information and a SHA-256 checksum. EchoWave requires Android 8.0 (API 26) or newer.
+Get the latest APK from [GitHub Releases](https://github.com/AyushDevHub/EchoWave/releases/latest). EchoWave supports Android 8.0 (API 26) and newer. Install the APK manually; Android may ask you to allow your browser or file manager to install apps. This is an Android security prompt and the app cannot remove it. Updating over an existing install with the same signing key preserves app data; do not uninstall first.
 
-The home screen checks GitHub Releases for a newer APK while the app is open and shows a small update chip when one is available. Tap it to open the release page, then download and install the APK manually. EchoWave does not install updates or send notifications in the background, so maintainers should still announce releases. Installing over the existing app preserves its data when the APK uses the same release signing key. Do not uninstall the app to update.
+The app checks GitHub Releases while open and shows an update link when a newer version is available. It does not silently download or install updates, and it does not send remote push notifications.
 
-## Important provider and distribution notice
+## Screenshots
 
-EchoWave currently uses unofficial YouTube/YouTube Music InnerTube endpoints for search, discovery, metadata, and stream resolution. These are undocumented interfaces and may stop working without notice. EchoWave is not an official YouTube client and is not affiliated with or endorsed by Google or YouTube.
+<!-- Screenshots are captured from the app UI and stored in docs/screenshots/. -->
 
-YouTube's [Terms of Service](https://www.youtube.com/t/terms) restrict automated access without prior written permission or another applicable basis. Its [API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) prohibit undocumented API use without express permission and prohibit background playback in API Clients. How those terms apply to this particular integration is a legal question; EchoWave has no documented authorization. A disclaimer, open-source license, or another app using similar methods does not grant permission. See [provider integration notes](docs/INNER_TUBE_NOTES.md) and the [project risk register](docs/RISK_REGISTER.md).
-
-The app does not host music. Users are responsible for their own use of the app and third-party services. Track artwork, metadata, lyrics, and streams are provided by independent services and rights holders.
+| Home | Search |
+| --- | --- |
+| ![EchoWave home screen](docs/screenshots/home.png) | ![EchoWave search screen](docs/screenshots/search.png) |
 
 ## Features
 
-| Area | Features |
-| --- | --- |
-| Onboarding | First-run setup for listener name, genre picks, and artist preferences |
-| Discovery | Search with typed filters, album detail track lists, browse collections, moods and genres, recent searches, and seed-based radio autoplay |
-| Music DNA | On-device listening taste profile, day-part awareness, and multi-factor radio recommendations based on the current seed, recent listening, favorites, and library history |
-| Playback | Queue, seek, previous/next, shuffle, repeat, and automatic advance |
-| Lyrics | Lyrics lookup and animated word-timed display when timing data is available |
-| Library | Local favorites, playlists, and listening history |
-| Personalization | Selectable color themes (12 presets), custom typography (Outfit / Plus Jakarta Sans), player styles (Classic, Glow, Contrast), and optional personalized greeting |
-| Android integration | Media session, notification, lock-screen, and background playback controls |
+### Find and play music
 
-Provider behavior can change independently of EchoWave. Some fallback resolvers are placeholders and should not be presented as working providers.
+- Search songs, albums, artists, playlists, videos, and episodes, with filters and recent searches.
+- Explore charts, moods, and genres; open album track lists and start seed-based radio.
+- Build a continuously replenished queue, refresh upcoming recommendations, and use shuffle, repeat, seek, and previous/next controls.
+- Browse synchronized lyrics when timing data is available.
 
-## Credits and provider status
+### Make it yours
 
-EchoWave adapts selected InnerTube stream and PO-token approaches from [Echo-Music](https://github.com/EchoMusicApp/Echo-Music); the vendored asset and adapted areas are listed in [CREDITS.md](CREDITS.md). The project also credits its text-matching code port and other reference-only projects there. EchoWave's recommendation ranking and on-device listening profile are project code; local listening events and the profile are not sent with radio requests. See [third-party notices](THIRD_PARTY_NOTICES.md) for dependencies and [privacy notes](docs/PRIVACY.md) for data handling.
+- Choose genres and search for artists during setup or later in Settings. Artist results include artwork where the catalog provides it.
+- Personalize recommendations with Music DNA computed on-device from listening activity. Review listening summaries, turn personalization off, or reset the profile.
+- Save favorites, playlists, and listening history locally. Import audio you own or are authorized to store through Android's document picker for offline playback.
+- Choose from 12 color themes, two fonts, and an optional personalized greeting.
 
-The current YouTube/YouTube Music integration uses undocumented endpoints and has no documented authorization. Version 1.0.1 has been published while the provider and content-rights review remains unresolved; publication and the fact that the app is free do not establish authorization or rights. See the [risk register](docs/RISK_REGISTER.md). Three unused MP3 resources with unknown provenance have been removed from the current source tree; earlier Git revisions still contain them.
+### Android playback
+
+- Background playback through Android Media3, with media session, notification, and lock-screen controls.
+
+## Privacy and usage counts
+
+Listening history, taste signals, favorites, playlists, and imported audio are stored on the device. EchoWave has no account system or app analytics backend and does not report listening activity to the project. The update check contacts GitHub's public release endpoint and exposes normal network metadata such as the device IP; see [Privacy](docs/PRIVACY.md).
+
+GitHub exposes aggregate APK asset download counts on each [release](https://github.com/AyushDevHub/EchoWave/releases). These count downloads, not unique people, successful installs, or current users. Since EchoWave has no telemetry, maintainers cannot determine how many people installed or actively use the app. Measuring active use would require collecting and transmitting usage signals; this project does not do that.
+
+Share feedback or propose a feature through [GitHub Issues](https://github.com/AyushDevHub/EchoWave/issues/new/choose). Do not include personal data, account credentials, cookies, signed URLs, or private listening history in a report.
+
+## Provider and content notice
+
+The current catalog integration uses unofficial, undocumented YouTube/YouTube Music InnerTube endpoints for search, metadata, discovery, and stream resolution. These interfaces can change or stop working. The project has no documented authorization for this access. YouTube's [Terms of Service](https://www.youtube.com/t/terms) and [API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies) describe restrictions relevant to automated and undocumented access. A disclaimer, open-source license, or another project's implementation does not grant permission. See [provider notes](docs/INNER_TUBE_NOTES.md) and the [risk register](docs/RISK_REGISTER.md).
+
+EchoWave does not host music. Users are responsible for their use of third-party services and for ensuring they have permission to store imported audio. Local audio import is only for files the user selects; it does not download catalog tracks. Artwork, metadata, lyrics, and streams are provided by independent services and rights holders.
 
 ## Build from source
 
-Requirements: Android Studio, Android SDK Platform 37, and JDK 17. Open the project in Android Studio or use the Gradle wrapper from the repository root.
+Requirements: Android Studio, Android SDK Platform 37, and JDK 17.
 
 ```powershell
 .\gradlew.bat assembleDebug
@@ -51,57 +64,26 @@ Requirements: Android Studio, Android SDK Platform 37, and JDK 17. Open the proj
 .\gradlew.bat lint
 ```
 
-Install a debug build on a connected device:
+On macOS or Linux, use `./gradlew assembleDebug`, `./gradlew test`, and `./gradlew lint`. See [developer setup](docs/SETUP.md), [architecture](ARCHITECTURE.md), [test plan](docs/TEST_PLAN.md), and [release process](docs/RELEASE_PROCESS.md).
 
-```powershell
-.\gradlew.bat installDebug
-```
-
-See [developer setup](docs/SETUP.md) for details.
-
-## Release signing
-
-Release signing keys are private and must never be committed. For a local release build, Gradle reads `~/.android/echowave-release.properties` (Windows: `%USERPROFILE%\.android\echowave-release.properties`). Keep the properties file and referenced keystore private, and maintain a secure backup. Losing the key prevents signing future updates with the same identity.
-
-```powershell
-.\gradlew.bat assembleRelease bundleRelease
-```
-
-The [release process](docs/RELEASE_PROCESS.md) describes versioning, verification, and publishing. Version 1.0.1 is the latest release. It was tested on a Moto G96 5G for lyrics synchronization and track changes; full device regression is incomplete. Provider authorization and content-rights review remain unresolved. Build success does not establish provider authorization, privacy compliance, or store approval.
-
-## Project structure
+## Project layout
 
 ```text
 app/src/main/java/com/howdy/echowave/
-  core/         script-agnostic text matching and network error handling
-  domain/       models, repository contracts, sources, recommendations, and use cases
-  data/         local persistence, provider clients, and stream resolution
-  playback/     Media3 service, session, controller, and queue routing
-  features/     feature boundaries, including Music DNA and AI extension interface
+  core/         shared utilities and error handling
+  domain/       models, repository contracts, sources, and recommendations
+  data/         local persistence and provider clients
+  playback/     Media3 service, session, controller, and queue
+  features/     feature boundaries, including listening insights
   ui/           Compose screens, navigation, and theme
 ```
 
-The UI observes `PlaybackController` state and does not access ExoPlayer directly. `AppContainer` wires repositories, music sources, resolvers, and playback.
+The UI observes `PlaybackController` state and does not access ExoPlayer directly. `AppContainer` wires repositories, sources, resolvers, and playback.
 
-## Project documentation
+## Documentation and community
 
-- [Documentation index](docs/INDEX.md)
-- [Architecture](ARCHITECTURE.md)
-- [Developer setup](docs/SETUP.md)
-- [Test plan](docs/TEST_PLAN.md)
-- [Release process and post-release checklist](docs/RELEASE_PROCESS.md)
-- [Risk register](docs/RISK_REGISTER.md)
-- [Privacy and data inventory](docs/PRIVACY.md)
-- [Security policy](SECURITY.md)
-- [Security and release review](docs/SECURITY_AUDIT.md)
-- [Provider integration notes](docs/INNER_TUBE_NOTES.md)
-- [Credits and dependency notices](CREDITS.md), [third-party notices](THIRD_PARTY_NOTICES.md)
-- [Changelog](docs/CHANGELOG.md)
+- [Documentation index](docs/INDEX.md) · [Privacy](docs/PRIVACY.md) · [Changelog](docs/CHANGELOG.md)
+- [Credits](CREDITS.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Code of Conduct](CODE_OF_CONDUCT.md)
 
-## Project policies
-
-Please read the [Code of Conduct](CODE_OF_CONDUCT.md), [contributor guide](CONTRIBUTING.md), [support guide](SUPPORT.md), and issue/PR templates before interacting with the repository. These files describe project expectations; they do not constitute provider authorization or alter third-party service terms.
-
-## License
-
-EchoWave is licensed under the [GNU General Public License v3.0](LICENSE). Donor code, dependency, and asset notes are in [CREDITS.md](CREDITS.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The app is provided without warranty; see the license for details.
+Please read the project policies before opening an issue or pull request. EchoWave is licensed under the [GNU General Public License v3.0](LICENSE) and is provided without warranty.

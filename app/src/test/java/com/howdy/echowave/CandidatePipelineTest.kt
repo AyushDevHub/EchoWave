@@ -2,6 +2,8 @@ package com.howdy.echowave
 
 import com.howdy.echowave.core.common.AppResult
 import com.howdy.echowave.domain.model.Track
+import com.howdy.echowave.domain.dna.MusicDnaProfile
+import com.howdy.echowave.domain.dna.ScoredItem
 import com.howdy.echowave.domain.recommendation.CandidateContext
 import com.howdy.echowave.domain.recommendation.CandidatePipeline
 import com.howdy.echowave.domain.recommendation.CandidateSource
@@ -69,5 +71,24 @@ class CandidatePipelineTest {
     @Test fun `no sources is an empty successful result`() = runBlocking {
         val result = CandidatePipeline(emptyList()).recommend(CandidateContext(track("seed")))
         assertEquals(emptyList<TrackCandidate>(), (result as AppResult.Ok).value)
+    }
+
+    @Test fun `recommendations keep human readable reasons from the ranking score`() = runBlocking {
+        val seed = track("seed", "Beedi Jalaile Dance", "Seed Singer")
+        val candidate = track("favorite", "Fevicol Se Party Dance", "Artist A")
+        val result = CandidatePipeline(listOf(source(candidate))).recommend(
+            CandidateContext(
+                seed = seed,
+                dnaProfile = MusicDnaProfile(
+                    topArtists = listOf(ScoredItem("artist a", "Artist A", 8.0, 10)),
+                ),
+                favoriteIds = setOf(candidate.id),
+            ),
+        ) as AppResult.Ok
+
+        val reasons = result.value.single().recommendationExplanation?.reasons.orEmpty()
+        assertTrue(reasons.any { it == "Similar detected style" })
+        assertTrue(reasons.any { it == "Artist A appears in your Music DNA" })
+        assertTrue(reasons.any { it == "In your favorites" })
     }
 }

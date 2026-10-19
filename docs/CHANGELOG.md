@@ -2,6 +2,20 @@
 
 User-visible changes are listed here. Internal maintenance and exhaustive file changes are recorded in Git history.
 
+## Unreleased
+
+- Added a refresh action to the Up next queue. It keeps the current track and replaces only upcoming recommendations.
+- Added a Settings shortcut to GitHub's feature request and feedback forms.
+- Reorganized the README, documented the limits of download and active-use statistics, and added screenshots captured from the app.
+- Fixed the stream probe's last-byte range, ignored stale player-ended callbacks after a new track selection, and stopped queue navigation from racing through multiple unavailable tracks.
+- Added Settings controls to pause Music DNA collection and personalization or reset its local listening data.
+- Added a local Listening Summary with today, week, month, and retained-history views, explicit play/completion rules, and opt-in time-of-day display.
+- Corrected singular play-count wording in the summary.
+- Added an On device Library tab that copies user-selected audio into EchoWave's app-specific files and routes it through Media3 for offline playback. This does not download provider catalog tracks.
+- Added Echo This from Now Playing: review ranked candidates based on the current track and available on-device listening signals, then add selected tracks to the queue without replacing it. Music DNA influence now grows with supporting event volume.
+- Added a Music DNA profile card to Listening Summary and per-candidate reasons in Echo This, based on the actual scoring signals used for ranking.
+- Avoided showing a time-of-day-derived profile label when that optional display is off; candidates with unknown metadata no longer receive an unsupported fresh-match reason or bonus.
+
 ## 1.0.1 (2026-10-10)
 
 - Expanded discovery with typed search filters, album detail track lists, browse collections, and seed-based radio autoplay from a selected song.

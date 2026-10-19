@@ -106,7 +106,15 @@ class Media3PlaybackController(
             when (playbackState) {
                 Player.STATE_BUFFERING -> _state.value = _state.value.copy(isBuffering = true)
                 Player.STATE_READY -> _state.value = _state.value.copy(isBuffering = false)
-                Player.STATE_ENDED -> onTrackEnded()
+                Player.STATE_ENDED -> {
+                    val endedId = controller?.currentMediaItem?.mediaId
+                    val selectedId = _state.value.currentTrack?.id
+                    if (endedId != null && endedId == selectedId) {
+                        onTrackEnded()
+                    } else {
+                        logd("ignoring stale ENDED callback mediaId=$endedId selectedId=$selectedId")
+                    }
+                }
                 else -> Unit
             }
         }
@@ -205,6 +213,51 @@ class Media3PlaybackController(
         }
     }
 
+    override suspend fun refreshQueue(): AppResult<Unit> {
+        val pipeline = candidatePipeline ?: return AppResult.Err("Queue refresh is unavailable")
+        val initial = _state.value
+        val seed = initial.currentTrack ?: return AppResult.Err("Nothing is playing")
+        if (loadingNextTracks) return AppResult.Err("Queue is already refreshing")
+        loadingNextTracks = true
+        _state.value = initial.copy(isLoadingNext = true, nextTracksMessage = null)
+        return try {
+            val kept = initial.queue.take((initial.queueIndex + 1).coerceAtLeast(1))
+            when (val result = pipeline.recommend(buildCandidateContext(seed, kept))) {
+                is AppResult.Err -> result.also {
+                    if (_state.value.currentTrack?.id == seed.id) {
+                        _state.value = _state.value.copy(nextTracksMessage = "Couldn't refresh queue: ${it.message}")
+                    }
+                }
+                is AppResult.Ok -> {
+                    if (_state.value.currentTrack?.id != seed.id) return AppResult.Err("Track changed while refreshing")
+                    val fresh = result.value.map { it.track }
+                    _state.value = _state.value.copy(
+                        queue = kept + fresh,
+                        queueIndex = kept.lastIndex.coerceAtLeast(0),
+                        nextTracksMessage = if (fresh.isEmpty()) "No more songs found." else null,
+                    )
+                    AppResult.Ok(Unit)
+                }
+            }
+        } finally {
+            loadingNextTracks = false
+            _state.value = _state.value.copy(isLoadingNext = false)
+        }
+    }
+
+    override suspend fun recommendations(seed: Track, limit: Int): AppResult<List<com.howdy.echowave.domain.recommendation.RecommendedTrack>> {
+        val pipeline = candidatePipeline ?: return AppResult.Err("Recommendations are unavailable")
+        if (limit <= 0) return AppResult.Ok(emptyList())
+        return when (val result = pipeline.recommend(buildCandidateContext(seed, _state.value.queue), limit)) {
+            is AppResult.Ok -> AppResult.Ok(result.value.mapNotNull { candidate ->
+                candidate.recommendationExplanation?.let { explanation ->
+                    com.howdy.echowave.domain.recommendation.RecommendedTrack(candidate.track, explanation)
+                }
+            })
+            is AppResult.Err -> result
+        }
+    }
+
     override fun appendToQueue(tracks: List<Track>) {
         if (tracks.isEmpty()) return
         val state = _state.value
@@ -228,6 +281,9 @@ class Media3PlaybackController(
             durationMs = track.durationMs ?: 0L,
             isBuffering = true, error = null, isLoadingNext = false, nextTracksMessage = null,
         )
+        // A failed stream lookup must not leave the previous queue item
+        // playing under the newly selected track's UI state.
+        controller?.pause()
         when (val r = music.resolveStream(track.id)) {
             is AppResult.Ok -> {
                 logd("resolve OK trackId=${track.id} mime=${r.value.mimeType}")
@@ -253,19 +309,13 @@ class Media3PlaybackController(
         }
     }
 
-    /**
-     * Queue advance with bounded skip: unplayable tracks are stepped over
-     * (at most a full queue) instead of stranding on an invisible error.
-     */
+    /** Attempt exactly the adjacent queue slot and surface its error if unavailable. */
     internal suspend fun advancePlay(delta: Int) {
         val tracks = _state.value.queue
-        var i = _state.value.queueIndex + delta
-        var attempts = 0
-        while (i in tracks.indices && attempts < tracks.size) {
-            logd("advance try index=$i")
-            if (playAt(tracks, i)) return
-            i += delta
-            attempts++
+        val target = _state.value.queueIndex + delta
+        if (target in tracks.indices) {
+            logd("advance try index=$target")
+            playAt(tracks, target)
         }
     }
 
@@ -321,9 +371,12 @@ class Media3PlaybackController(
             RepeatMode.ONE -> scope.launch { playAt(s.queue, s.queueIndex) }
             else -> {
                 val next = s.queueIndex + 1
-                if (next in s.queue.indices) scope.launch { advancePlay(1) }
+                // Automatic transitions try one slot only. If it cannot be
+                // resolved, leave the error visible instead of racing through
+                // the entire queue while every candidate is rejected.
+                if (next in s.queue.indices) scope.launch { playAt(s.queue, next) }
                 else if (s.repeatMode == RepeatMode.ALL && s.queue.isNotEmpty()) {
-                    scope.launch { advancePlayFromStart() }
+                    scope.launch { playAt(s.queue, 0) }
                 } else {
                     _state.value = s.copy(isPlaying = false)
                     if (s.repeatMode == RepeatMode.OFF) scope.launch { requestNextAtQueueEnd() }
@@ -365,7 +418,8 @@ class Media3PlaybackController(
                     } else {
                         appendToQueue(additions)
                         _state.value = _state.value.copy(isLoadingNext = false)
-                        advancePlay(1)
+                        val updated = _state.value
+                        playAt(updated.queue, updated.queueIndex + 1)
                     }
                 }
             }
@@ -375,13 +429,6 @@ class Media3PlaybackController(
             if (_state.value.isLoadingNext) {
                 _state.value = _state.value.copy(isLoadingNext = false)
             }
-        }
-    }
-
-    private suspend fun advancePlayFromStart() {
-        val tracks = _state.value.queue
-        for (i in tracks.indices) {
-            if (playAt(tracks, i)) return
         }
     }
 

@@ -21,29 +21,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +58,6 @@ import com.howdy.echowave.BuildConfig
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.data.local.FontChoice
 import com.howdy.echowave.data.local.SettingsRepository
-import com.howdy.echowave.data.local.PlayerStyle
 import com.howdy.echowave.data.local.ThemePreset
 import com.howdy.echowave.ui.components.AppLogo
 
@@ -62,33 +67,51 @@ fun SettingsScreen(
     onOpenPlayback: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onEditTaste: () -> Unit = {},
+    onOpenListeningSummary: () -> Unit = {},
     vm: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(
             (LocalContext.current.applicationContext as EchoWaveApp).container.settingsRepo,
+            (LocalContext.current.applicationContext as EchoWaveApp).container.dnaRepository,
         ),
     ),
 ) {
     val displayName by vm.displayName.collectAsState()
     val greetingEnabled by vm.greetingEnabled.collectAsState()
     val musicPreferences by vm.musicPreferences.collectAsState()
+    val dnaEnabled by vm.dnaEnabled.collectAsState()
+    val isResettingDna by vm.isResettingDna.collectAsState()
+    val dnaError by vm.dnaError.collectAsState()
+    val uri = LocalUriHandler.current
+    var showResetDnaConfirmation by remember { mutableStateOf(false) }
+    var showDnaInfo by remember { mutableStateOf(false) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp),
     ) {
-        Text("YOUR LISTENING SPACE", modifier = Modifier.padding(top = 20.dp),
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-        Text("Make it yours.", style = MaterialTheme.typography.headlineLarge,
+        Text("Settings", style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(top = 4.dp, bottom = 22.dp))
 
-        SettingsNavRow("Appearance", "", Icons.Default.Palette, onOpenAppearance)
-        Spacer(Modifier.height(10.dp))
-        SettingsNavRow("Playback", "", Icons.Default.GraphicEq, onOpenPlayback)
-        Spacer(Modifier.height(10.dp))
-        SettingsNavRow("About EchoWave", "", Icons.Default.Info, onOpenAbout)
+        Surface(shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+            modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 14.dp)) {
+                SettingsNavRow("Appearance", Icons.Default.Palette, onOpenAppearance)
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                SettingsNavRow("Playback", Icons.Default.GraphicEq, onOpenPlayback)
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                SettingsNavRow("Listening Summary", Icons.Default.BarChart, onOpenListeningSummary)
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                SettingsNavRow("About EchoWave", Icons.Default.Info, onOpenAbout)
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                SettingsNavRow("Send feedback or request a feature", Icons.Default.Feedback) {
+                    uri.openUri("https://github.com/AyushDevHub/EchoWave/issues/new/choose")
+                }
+            }
+        }
 
         Spacer(Modifier.height(24.dp))
         SettingsSectionTitle("Your taste", Icons.Default.MusicNote)
-        Surface(shape = RoundedCornerShape(24.dp),
+        Surface(shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
             modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
@@ -108,6 +131,40 @@ fun SettingsScreen(
             }
         }
 
+        Spacer(Modifier.height(12.dp))
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text("Personalize recommendations", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Switch(checked = dnaEnabled, onCheckedChange = vm::setDnaEnabled)
+                    IconButton(onClick = { showDnaInfo = true }) {
+                        Icon(Icons.Default.Info, contentDescription = "About Music DNA",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                TextButton(
+                    onClick = { showResetDnaConfirmation = true },
+                    enabled = !isResettingDna,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Text(if (isResettingDna) "Clearing Music DNA…" else "Reset Music DNA")
+                }
+                if (dnaError != null) {
+                    Text(
+                        dnaError.orEmpty(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
         SettingsSectionTitle("A personal welcome", Icons.Default.Info)
         Surface(shape = RoundedCornerShape(24.dp),
@@ -120,6 +177,31 @@ fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(28.dp))
+
+        if (showResetDnaConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showResetDnaConfirmation = false },
+                title = { Text("Reset Music DNA?") },
+                text = { Text("This permanently deletes the listening signals and taste profile stored on this device. It does not delete your playlists or favorites.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showResetDnaConfirmation = false
+                        vm.resetDna()
+                    }) { Text("Reset") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetDnaConfirmation = false }) { Text("Cancel") }
+                },
+            )
+        }
+        if (showDnaInfo) {
+            AlertDialog(
+                onDismissRequest = { showDnaInfo = false },
+                title = { Text("Music DNA") },
+                text = { Text("Listening signals update recommendations on this device. Turn this off to pause collection. Reset it here to delete saved signals and your profile.") },
+                confirmButton = { TextButton(onClick = { showDnaInfo = false }) { Text("Done") } },
+            )
+        }
     }
 }
 
@@ -227,7 +309,7 @@ fun PlaybackSettingsScreen(
         ),
     ),
 ) {
-    val playerStyle by vm.playerStyle.collectAsState()
+    var showStyleInfo by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -249,33 +331,32 @@ fun PlaybackSettingsScreen(
             }
         }
         Spacer(Modifier.height(16.dp))
-        Text("Player style", style = MaterialTheme.typography.titleMedium,
+        Text("Player", style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                PlayerStyle.entries.forEachIndexed { index, style ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { vm.setPlayerStyle(style) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(style.label, style = MaterialTheme.typography.bodyLarge)
-                            Text(style.description, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        RadioButton(selected = playerStyle == style, onClick = { vm.setPlayerStyle(style) })
-                    }
-                    if (index != PlayerStyle.entries.lastIndex) androidx.compose.material3.HorizontalDivider(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                    )
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Classic", style = MaterialTheme.typography.bodyLarge)
+                    Text("Glow lyrics · sing along", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { showStyleInfo = true }) {
+                    Icon(Icons.Default.Info, contentDescription = "About the classic player",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+        if (showStyleInfo) AlertDialog(
+            onDismissRequest = { showStyleInfo = false },
+            title = { Text("Classic player") },
+            text = { Text("Artwork glow with synced, word-timed lyrics. Lyrics highlight each word as it plays when word timing is available.") },
+            confirmButton = { TextButton(onClick = { showStyleInfo = false }) { Text("Done") } },
+        )
         Spacer(Modifier.height(28.dp))
     }
 }
@@ -342,31 +423,18 @@ fun AboutSettingsScreen(onBack: () -> Unit = {}) {
 @Composable
 private fun SettingsNavRow(
     title: String,
-    subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp))
-            Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                if (subtitle.isNotBlank()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            Text(title, Modifier.weight(1f).padding(start = 14.dp), style = MaterialTheme.typography.bodyLarge)
             Icon(Icons.Default.ChevronRight, contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
-    }
 }
 
 @Composable

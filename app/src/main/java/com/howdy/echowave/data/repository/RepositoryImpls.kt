@@ -5,12 +5,15 @@ import com.howdy.echowave.data.local.PlaylistEntity
 import com.howdy.echowave.data.local.PlaylistTrackEntity
 import com.howdy.echowave.data.local.TrackDao
 import com.howdy.echowave.data.local.TrackEntity
+import com.howdy.echowave.core.common.AppResult
+import com.howdy.echowave.domain.repository.LocalAudioRepository
 import com.howdy.echowave.domain.model.Playlist
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.repository.LibraryRepository
 import com.howdy.echowave.domain.repository.MusicRepository
 import com.howdy.echowave.domain.source.MusicSource
 import com.howdy.echowave.domain.source.StreamResolver
+import com.howdy.echowave.domain.source.StreamInfo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -23,9 +26,28 @@ private fun TrackEntity.toDomain() = Track(id, title, artist, album, artworkUrl,
 class MusicRepositoryImpl(
     private val source: MusicSource,
     private val resolver: StreamResolver,
+    private val localAudio: LocalAudioRepository? = null,
 ) : MusicRepository {
     override suspend fun search(query: String) = source.search(query)
-    override suspend fun resolveStream(trackId: String) = resolver.resolve(trackId)
+    override suspend fun resolveStream(trackId: String): AppResult<StreamInfo> {
+        if (!trackId.startsWith(LocalAudioRepository.TRACK_ID_PREFIX)) {
+            return resolver.resolve(trackId)
+        }
+        val fileUri = localAudio?.fileUri(trackId)
+            ?: return AppResult.Err("This local audio file is missing or unavailable.")
+        val extension = fileUri.substringAfterLast('.', "").substringBefore('?').lowercase()
+        val mimeType = when (extension) {
+            "mp3" -> "audio/mpeg"
+            "m4a", "mp4" -> "audio/mp4"
+            "aac" -> "audio/aac"
+            "flac" -> "audio/flac"
+            "ogg", "opus" -> "audio/ogg"
+            "wav" -> "audio/wav"
+            "webm" -> "audio/webm"
+            else -> null
+        }
+        return AppResult.Ok(StreamInfo(trackId, fileUri, mimeType))
+    }
 }
 
 class LibraryRepositoryImpl(

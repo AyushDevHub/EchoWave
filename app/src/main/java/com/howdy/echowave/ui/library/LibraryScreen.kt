@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -49,6 +50,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.howdy.echowave.EchoWaveApp
 import com.howdy.echowave.domain.model.Playlist
 import com.howdy.echowave.domain.model.Track
@@ -60,16 +63,23 @@ fun LibraryScreen(
     vm: LibraryViewModel = viewModel(
         factory = LibraryViewModel.Factory(
             (LocalContext.current.applicationContext as EchoWaveApp).container.libraryRepo,
+            (LocalContext.current.applicationContext as EchoWaveApp).container.localAudioRepo,
         ),
     ),
 ) {
     val favorites by vm.favorites.collectAsState()
     val history by vm.history.collectAsState()
     val playlists by vm.playlists.collectAsState()
+    val localAudio by vm.localAudio.collectAsState()
     var showCreate by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
+    var deletingLocalTrack by remember { mutableStateOf<Track?>(null) }
     var newName by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { vm.refresh() }
+    LaunchedEffect(Unit) { vm.refreshLocalAudio() }
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        vm.importLocalAudio(uris.map { it.toString() })
+    }
     selectedPlaylist?.let { playlist ->
         PlaylistDetailScreen(playlist, vm, { selectedPlaylist = null }, onPlay)
         return
@@ -82,7 +92,7 @@ fun LibraryScreen(
         ) {
             Column(Modifier.weight(1f)) {
                 Text("Your Library", style = MaterialTheme.typography.headlineLarge)
-                Text("${playlists.size} playlists | ${favorites.size} favorites",
+                Text("${playlists.size} playlists · ${favorites.size} favorites",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = { showCreate = true }) {
@@ -164,7 +174,76 @@ fun LibraryScreen(
                         LibraryRowDivider()
                     }
                 }
+                LibrarySection.ON_DEVICE -> {
+                    item(key = "local-audio-import") {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Button(
+                                onClick = { audioPicker.launch(arrayOf("audio/*")) },
+                                enabled = !localAudio.importing,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null)
+                                Text("  Add audio from device")
+                            }
+                            Text(
+                                "EchoWave copies selected files into its app-specific music folder. They play offline and are removed when EchoWave is uninstalled.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                            localAudio.importProgress?.let { progress ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Text(progress, Modifier.padding(start = 10.dp), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            localAudio.error?.let { error ->
+                                Column(Modifier.padding(top = 8.dp)) {
+                                    Text(error, color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall)
+                                    TextButton(onClick = vm::refreshLocalAudio) { Text("Retry") }
+                                }
+                            }
+                        }
+                    }
+                    when {
+                        localAudio.loading -> item(key = "local-audio-loading") {
+                            CircularProgressIndicator(Modifier.padding(28.dp))
+                        }
+                        localAudio.tracks.isEmpty() -> item(key = "local-audio-empty") {
+                            LibraryEmptyState("No offline audio yet", "Add audio files you own or have permission to use.")
+                        }
+                        else -> items(localAudio.tracks, key = { it.id }) { track ->
+                            TrackRow(
+                                track = track,
+                                onClick = { onPlay(localAudio.tracks, localAudio.tracks.indexOf(track)) },
+                                trailing = {
+                                    IconButton(onClick = { deletingLocalTrack = track }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Remove ${track.title} from this device")
+                                    }
+                                },
+                            )
+                            LibraryRowDivider()
+                        }
+                    }
+                }
             }
+        }
+        deletingLocalTrack?.let { track ->
+            AlertDialog(
+                onDismissRequest = { deletingLocalTrack = null },
+                title = { Text("Remove offline audio?") },
+                text = { Text("${track.title} will be deleted from EchoWave's app folder. Other copies are not affected.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        vm.deleteLocalAudio(track.id)
+                        deletingLocalTrack = null
+                    }) { Text("Delete file") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletingLocalTrack = null }) { Text("Cancel") }
+                },
+            )
         }
         if (showCreate) {
             AlertDialog(
@@ -193,7 +272,9 @@ fun LibraryScreen(
     }
 }
 
-private enum class LibrarySection(val label: String) { PLAYLISTS("Playlists"), FAVORITES("Favorites"), HISTORY("History") }
+private enum class LibrarySection(val label: String) {
+    PLAYLISTS("Playlists"), FAVORITES("Favorites"), HISTORY("History"), ON_DEVICE("On device"),
+}
 
 @Composable
 private fun LibraryEmptyState(title: String, subtitle: String) {
