@@ -8,6 +8,8 @@ import com.howdy.echowave.data.local.TrackEntity
 import com.howdy.echowave.core.common.AppResult
 import com.howdy.echowave.domain.repository.LocalAudioRepository
 import com.howdy.echowave.domain.model.Playlist
+import com.howdy.echowave.domain.model.SearchFilter
+import com.howdy.echowave.domain.model.SearchItem
 import com.howdy.echowave.domain.model.Track
 import com.howdy.echowave.domain.repository.LibraryRepository
 import com.howdy.echowave.domain.repository.MusicRepository
@@ -29,6 +31,11 @@ class MusicRepositoryImpl(
     private val localAudio: LocalAudioRepository? = null,
 ) : MusicRepository {
     override suspend fun search(query: String) = source.search(query)
+    override suspend fun searchArtists(query: String): AppResult<List<SearchItem.Artist>> =
+        when (val result = source.searchFiltered(query, SearchFilter.ARTISTS, 20)) {
+            is AppResult.Ok -> AppResult.Ok(result.value.items.filterIsInstance<SearchItem.Artist>())
+            is AppResult.Err -> result
+        }
     override suspend fun resolveStream(trackId: String): AppResult<StreamInfo> {
         if (!trackId.startsWith(LocalAudioRepository.TRACK_ID_PREFIX)) {
             return resolver.resolve(trackId)

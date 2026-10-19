@@ -13,6 +13,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /** Genre picks offered during onboarding (offline preset chips). */
 val ONBOARDING_GENRES = listOf(
@@ -26,6 +30,13 @@ val ONBOARDING_GENRES = listOf(
     "Dance",
     "Indie",
     "Lo-fi",
+)
+
+/** Recognizable starter artists surfaced when Bollywood is selected. Artist artwork comes from the live catalog. */
+private val BOLLYWOOD_ARTIST_STARTERS = listOf(
+    "Arijit Singh", "Yo Yo Honey Singh", "Badshah", "Shreya Ghoshal",
+    "Sonu Nigam", "Neha Kakkar", "Sunidhi Chauhan", "Jubin Nautiyal",
+    "A. R. Rahman", "Pritam", "Vishal-Shekhar", "Atif Aslam",
 )
 
 data class OnboardingUiState(
@@ -67,6 +78,7 @@ class OnboardingViewModel(
     val ui: StateFlow<OnboardingUiState> = _ui
     private val jobs get() = workScope ?: viewModelScope
     private var searchJob: Job? = null
+    private var suggestionsJob: Job? = null
 
     fun prefillName(current: String) {
         if (_ui.value.name.isBlank() && current.isNotBlank()) {
@@ -86,7 +98,12 @@ class OnboardingViewModel(
 
     fun next() {
         val s = _ui.value
-        if (s.canContinue() && s.step < 2) _ui.value = s.copy(step = s.step + 1)
+        if (s.canContinue() && s.step < 2) {
+            _ui.value = s.copy(step = s.step + 1)
+            if (s.step == 1 && "Bollywood" in s.genres && s.artistQuery.isBlank()) {
+                loadBollywoodArtistStarters()
+            }
+        }
     }
 
     fun back() {
@@ -95,6 +112,8 @@ class OnboardingViewModel(
     }
 
     fun onArtistQuery(q: String) {
+        suggestionsJob?.cancel()
+        suggestionsJob = null
         _ui.value = _ui.value.copy(artistQuery = q, artistError = null)
         searchJob?.cancel()
         if (q.isBlank()) {
@@ -105,11 +124,8 @@ class OnboardingViewModel(
             delay(350)
             _ui.value = _ui.value.copy(artistLoading = true)
             try {
-                when (val r = music.search(q)) {
-                    is AppResult.Ok -> _ui.value = _ui.value.copy(
-                        artistLoading = false,
-                        artistResults = r.value.items.filterIsInstance<SearchItem.Artist>(),
-                    )
+                when (val r = music.searchArtists(q)) {
+                    is AppResult.Ok -> _ui.value = _ui.value.copy(artistLoading = false, artistResults = r.value)
                     is AppResult.Err -> _ui.value = _ui.value.copy(
                         artistLoading = false, artistError = r.message,
                     )
@@ -117,6 +133,33 @@ class OnboardingViewModel(
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _ui.value = _ui.value.copy(artistLoading = false, artistError = e.message)
+            }
+        }
+    }
+
+    private fun loadBollywoodArtistStarters() {
+        suggestionsJob?.cancel()
+        _ui.value = _ui.value.copy(artistQuery = "", artistLoading = true, artistError = null, artistResults = emptyList())
+        suggestionsJob = jobs.launch {
+            try {
+                val results = coroutineScope {
+                    val requestLimit = Semaphore(3)
+                    BOLLYWOOD_ARTIST_STARTERS.map { name ->
+                        async { requestLimit.withPermit { music.searchArtists(name).let { result ->
+                            when (result) {
+                                is AppResult.Ok -> result.value.firstOrNull { artist ->
+                                    artist.name.equals(name, ignoreCase = true) ||
+                                        artist.name.contains(name, ignoreCase = true)
+                                }
+                                is AppResult.Err -> null
+                            }
+                        } } }
+                    }.mapNotNull { it.await() }.distinctBy { it.id }
+                }
+                _ui.value = _ui.value.copy(artistLoading = false, artistResults = results)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _ui.value = _ui.value.copy(artistLoading = false, artistError = e.message ?: "Please retry.")
             }
         }
     }

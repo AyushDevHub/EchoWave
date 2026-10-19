@@ -205,6 +205,13 @@ private fun ArtistStep(
         shape = CircleShape,
     )
     Spacer(Modifier.height(12.dp))
+    if ("Bollywood" in ui.genres && ui.artistQuery.isBlank()) {
+        Text(
+            "Popular Bollywood artists",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+    }
     Box(Modifier.weight(1f).fillMaxWidth()) {
         when {
             ui.artistLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -225,7 +232,7 @@ private fun ArtistStep(
                     Button(onClick = { onQuery(ui.artistQuery) }) { Text("Retry") }
                 }
             }
-            ui.artistQuery.isBlank() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            ui.artistQuery.isBlank() && ui.artistResults.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     if (ui.artists.isEmpty()) "Type above to find artists."
                     else "Picked: ${ui.artists.joinToString { it.name }}",
